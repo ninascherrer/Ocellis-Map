@@ -1,6 +1,6 @@
 import * as maplibregl from '../../vendor/maplibre-gl/maplibre-gl.mjs';
 import { buildStyle, BRAND } from './map-style.js';
-import { CATEGORIES, CATEGORY_COLOR, TYPES, TYPE_ORDER, CUSTOM_ICONS, EMERGENCY_NUMBERS, WALK, WALK_RINGS } from './config.js';
+import { CATEGORIES, CATEGORY_STYLE, catVars, TYPES, TYPE_ORDER, CUSTOM_ICONS, EMERGENCY_NUMBERS, WALK, WALK_RINGS } from './config.js';
 import { LUCIDE } from './icons.js';
 
 /* ==========================================================================
@@ -200,10 +200,10 @@ const px = (size) => size * (DPR / 2); // les dimensions ci-dessous sont exprim�
 const markerId = (p) => `poi-${p.cat}-${typeIcon(p)}`;
 
 /**
- * Pastille de lieu : disque à la couleur de la catégorie, pictogramme blanc, liseré blanc.
+ * Pastille de lieu : disque à la couleur de la catégorie, pictogramme contrasté, liseré blanc.
  * 40 px à l'écran (52 px quand le lieu est sélectionné ou survolé, avec un anneau aubergine).
  */
-function markerSvg(glyph, color, active) {
+function markerSvg(glyph, color, glyphColor, active) {
   const size = active ? 128 : 96; // unités @2x, marge comprise pour l'ombre
   const c = size / 2;
   const r = active ? 46 : 36; // rayon du disque
@@ -216,7 +216,7 @@ function markerSvg(glyph, color, active) {
     </filter></defs>
     ${active ? `<circle cx="${c}" cy="${c}" r="${r + 9}" fill="none" stroke="${BRAND.prune}" stroke-width="4"/>` : ''}
     <circle cx="${c}" cy="${c}" r="${r}" fill="${color}" stroke="#ffffff" stroke-width="${active ? 6 : 5}" filter="url(#sh)"/>
-    <g transform="translate(${t} ${t}) scale(${s})" fill="none" stroke="#ffffff" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">${glyph}</g>
+    <g transform="translate(${t} ${t}) scale(${s})" fill="none" stroke="${glyphColor}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${glyph}</g>
   </svg>`;
 }
 
@@ -247,7 +247,8 @@ async function registerIcons() {
     return [false, true].map(async (active) => {
       const id = `poi-${cat}-${name}${active ? '-active' : ''}`;
       if (map.hasImage(id)) return;
-      const img = await loadImage(markerSvg(glyph, CATEGORY_COLOR[cat], active));
+      const st = CATEGORY_STYLE[cat];
+      const img = await loadImage(markerSvg(glyph, st.color, st.glyph, active));
       if (!map.hasImage(id)) map.addImage(id, img, { pixelRatio: DPR });
     });
   }));
@@ -593,7 +594,7 @@ function placeCard(p) {
   <article class="card">
     <button class="card__close" type="button" data-action="close" aria-label="Fermer">${ico('x')}</button>
     <div class="card__head">
-      <p class="card__kicker"><span class="card__kicker-icon" style="--cat:${CATEGORY_COLOR[p.cat]}">${ico(typeIcon(p))}</span>${esc(cat?.label || '')} · ${esc(typeLabel(p))}</p>
+      <p class="card__kicker"><span class="card__kicker-icon" style="${catVars(p.cat)}">${ico(typeIcon(p))}</span>${esc(cat?.label || '')} · ${esc(typeLabel(p))}</p>
       <h2 class="card__title">${esc(p.name)}</h2>
       ${p.address ? `<p class="card__address">${addressText(p.address)}</p>` : ''}
       <ul class="card__facts">${facts.join('')}</ul>
@@ -718,7 +719,7 @@ function renderFilters() {
   root.innerHTML = `
     <button class="chip chip--all" type="button" data-cat="*" aria-pressed="${all}">Tout voir</button>
     ${CATEGORIES.map((c) => `
-      <button class="chip" type="button" data-cat="${c.id}" style="--cat:${c.color}" aria-pressed="${!all && state.activeCats.has(c.id)}" title="${esc(c.blurb)}">
+      <button class="chip" type="button" data-cat="${c.id}" style="${catVars(c.id)}" aria-pressed="${!all && state.activeCats.has(c.id)}" title="${esc(c.blurb)}">
         ${ico(c.icon)}<span>${esc(isMobile() ? c.short : c.label)}</span><span class="chip__count">${counts[c.id] || 0}</span>
       </button>`).join('')}`;
   root.querySelectorAll('.chip').forEach((b) => b.addEventListener('click', () => {
@@ -781,7 +782,7 @@ function resultItem(p) {
   return `
     <button class="result${p.id === state.selectedId ? ' is-active' : ''}" type="button" role="listitem" data-id="${esc(p.id)}"
       aria-label="${esc(`${p.name}, ${typeLabel(p)}, ${fmtWalk(p.distance)} à pied`)}">
-      <span class="result__icon" style="--cat:${CATEGORY_COLOR[p.cat]}">${ico(typeIcon(p))}</span>
+      <span class="result__icon" style="${catVars(p.cat)}">${ico(typeIcon(p))}</span>
       <span class="result__body">
         <span class="result__name">${esc(p.name)} ${fav}</span>
         <span class="result__meta">${meta}</span>

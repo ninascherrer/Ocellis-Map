@@ -3,17 +3,27 @@
  * Une seule couleur (l'aubergine Ocellis) pour toutes les catégories : on les distingue par le pictogramme.
  */
 /*
- * Une couleur sourde par catégorie (pastilles de la carte, pictogrammes de la liste et des filtres).
- * Tons choisis pour rester doux à côté de l'aubergine Ocellis, et contrastés avec un pictogramme blanc.
+ * Une couleur par catégorie, tirée de la palette « Color combo no. 757 » :
+ * crème #F0E7E2, rose sable #CEAB97, sauge #A1A58C, terracotta #AD6640, bleu ardoise #3D5C6E, gris bleu #BFC7C9.
+ *  - color : fond de la pastille sur la carte ;
+ *  - glyph : couleur du pictogramme sur la pastille (crème sur les teintes soutenues,
+ *            même teinte assombrie sur les teintes claires, contraste ≥ 3,6:1) ;
+ *  - ink   : couleur des pictogrammes de la liste et des filtres (lisible sur fond clair).
  */
 export const CATEGORIES = [
-  { id: 'bien-etre', label: 'Bien-être', short: 'Bien-être', icon: 'leaf', color: '#5f8f5a', blurb: 'Sport, piscine, parcs et jardins' },
-  { id: 'restaurants', label: 'Restaurants', short: 'Restos', icon: 'utensils', color: '#a35f78', blurb: 'Déjeuners, cafés, boulangeries' },
-  { id: 'courses', label: 'Courses', short: 'Courses', icon: 'shopping-basket', color: '#9e7b33', blurb: 'Supermarchés et supérettes' },
-  { id: 'sante', label: 'Urgences & santé', short: 'Santé', icon: 'heart-pulse', color: '#b35a4c', blurb: 'Pharmacies et hôpital' },
-  { id: 'transports', label: 'Transports', short: 'Transports', icon: 'tram-front', color: '#5b6f80', blurb: "Métro, RER, bus, Vélib', parkings" },
+  { id: 'bien-etre', label: 'Bien-être', short: 'Bien-être', icon: 'leaf', color: '#a1a58c', glyph: '#464838', ink: '#464838', blurb: 'Sport, piscine, parcs et jardins' },
+  { id: 'restaurants', label: 'Restaurants', short: 'Restos', icon: 'utensils', color: '#ceab97', glyph: '#714a33', ink: '#714a33', blurb: 'Déjeuners, cafés, boulangeries' },
+  { id: 'courses', label: 'Courses', short: 'Courses', icon: 'shopping-basket', color: '#bfc7c9', glyph: '#566366', ink: '#566366', blurb: 'Supermarchés et supérettes' },
+  { id: 'sante', label: 'Urgences & santé', short: 'Santé', icon: 'heart-pulse', color: '#ad6640', glyph: '#f0e7e2', ink: '#ad6640', blurb: 'Pharmacies et hôpital' },
+  { id: 'transports', label: 'Transports', short: 'Transports', icon: 'tram-front', color: '#3d5c6e', glyph: '#f0e7e2', ink: '#3d5c6e', blurb: "Métro, RER, bus, Vélib', parkings" },
 ];
 export const CATEGORY_COLOR = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.color]));
+export const CATEGORY_STYLE = Object.fromEntries(CATEGORIES.map((c) => [c.id, c]));
+/** Variables CSS d'une catégorie, pour la liste, les filtres et les fiches. */
+export const catVars = (id) => {
+  const c = CATEGORY_STYLE[id];
+  return c ? `--cat:${c.color};--cat-ink:${c.ink};--cat-glyph:${c.glyph}` : '';
+};
 
 /** Types de lieux : libellé + pictogramme (Lucide, ou « metro » dessiné à la main). */
 export const TYPES = {
