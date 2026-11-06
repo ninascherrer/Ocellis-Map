@@ -870,6 +870,15 @@ function bindUI() {
   });
 
   $('#recenter').addEventListener('click', recenter);
+
+  // Logo Ocellis : toujours visible, un clic ramène en haut du panneau.
+  const panel = $('#panel');
+  const toTop = () => panel.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  $('#logo-top').addEventListener('click', toTop);
+  $('#to-top').addEventListener('click', toTop);
+  panel.addEventListener('scroll', () => panel.classList.toggle('is-scrolled', panel.scrollTop > 24), { passive: true });
+  // Sur mobile, le logo flotte sur la carte : il remonte la liste si elle est ouverte, sinon recentre sur les bureaux.
+  $('#logo-map').addEventListener('click', () => (panel.dataset.state === 'open' && panel.scrollTop > 0 ? toTop() : recenter()));
   $('#brand-address').addEventListener('click', () => select('ocellis'));
   $('#panel-handle').addEventListener('click', () => setPanel($('#panel').dataset.state === 'open' ? 'peek' : 'open'));
 

@@ -22,10 +22,17 @@
         <span class="panel__handle-label" id="panel-handle-label">Explorer le quartier</span>
       </button>
 
-      <header class="brand">
-        <a class="brand__logo" href="https://ocellis.fr" target="_blank" rel="noopener" aria-label="Ocellis — site officiel">
+      <!-- Logo toujours visible : un clic ramène en haut du panneau -->
+      <div class="panel__top">
+        <button class="brand__logo" id="logo-top" type="button" aria-label="Ocellis — revenir en haut" title="Revenir en haut">
           <img src="assets/brand/ocellis-logo.svg" alt="Ocellis" width="110" height="44">
-        </a>
+        </button>
+        <button class="to-top" id="to-top" type="button" tabindex="-1" aria-hidden="true">
+          <span class="ico" data-icon="chevron-up" aria-hidden="true"></span>Haut de page
+        </button>
+      </div>
+
+      <header class="brand">
         <p class="brand__eyebrow">Guide du quartier</p>
         <h1 class="brand__title">Bienvenue dans votre nouveau quartier</h1>
         <button class="brand__address" id="brand-address" type="button">
@@ -60,10 +67,10 @@
     <main class="map-wrap">
       <div id="map" class="map" role="region" aria-label="Carte du quartier"></div>
 
-      <div class="map-brand" aria-hidden="true">
+      <button class="map-brand" id="logo-map" type="button" aria-label="Ocellis — revenir en haut">
         <img src="assets/brand/ocellis-logo.svg" alt="" width="84" height="34">
         <span>Guide du quartier</span>
-      </div>
+      </button>
 
       <button class="recenter" id="recenter" type="button" title="Recentrer la carte sur les bureaux Ocellis">
         <span class="recenter__symbol" aria-hidden="true"><img src="assets/brand/ocellis-symbol-white.svg" alt=""></span>
