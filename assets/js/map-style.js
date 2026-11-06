@@ -1,40 +1,59 @@
 /**
- * Fond de carte Ocellis — style « plan d'architecte », volontairement épuré.
- *  - bâtiments en aplats sans contour, rues en négatif (blanc), aucune bordure de voie ;
- *  - ni numéros, ni chemins, ni limites administratives, ni pictogrammes du fond ;
- *  - seuls les grands axes sont nommés, en petites capitales espacées.
+ * Fond de carte Ocellis — plan de quartier « dessiné sur mesure ».
+ *
+ * Principes :
+ *  - palette réduite de la charte : blanc cassé #F1EFEB, anthracite #26282D (textes),
+ *    vert doux #B0D6AA atténué (espaces verts), blanc (rues) ; l'aubergine #2B041A est
+ *    réservée au marqueur Ocellis et aux interactions (elle n'apparaît pas dans le fond) ;
+ *  - bâti en aplats très clairs, bords nets, sans contour visible ni ombre ;
+ *  - rues en blanc, sans bordure, sur trois niveaux de largeur ; seule l'avenue Charles de Gaulle
+ *    reçoit un double filet fin pour rester repérable ;
+ *  - libellés sobres et peu répétés : grands axes en petites capitales, petites rues de près.
+ *
  * Tuiles vectorielles OpenFreeMap (données © OpenStreetMap, schéma OpenMapTiles) — gratuites,
- * sans clé d'API, y compris pour un usage professionnel.
+ * sans clé d'API, y compris pour un usage professionnel. La géométrie (positions des rues,
+ * bâtiments, parcs) n'est jamais modifiée : seul le rendu l'est.
  */
 export const BRAND = {
-  prune: '#2b0018',
+  prune: '#2b041a', // aubergine Ocellis (charte)
   pruneSoft: '#5b2a44',
   rose: '#f9d7f6',
   paper: '#f1efeb',
-  ink: '#1f2028',
+  ink: '#26282d', // anthracite (charte)
 };
 
 const C = {
-  land: '#f1efeb', // blanc Ocellis
-  block: '#e3dedb', // bâti : blanc teinté d'aubergine
-  green: '#dfe7d6',
-  wood: '#d6e2cc',
-  water: '#d4dfe4',
-  waterLabel: '#7b929e',
+  land: '#f1efeb',
+  building: '#e7e4df', // aplat à peine plus soutenu que le fond
+  green: '#d6e4d0', // #B0D6AA atténué sur le blanc cassé
+  water: '#d9e0e2',
   street: '#ffffff',
-  label: 'rgba(43, 0, 24, 0.55)',
-  labelSoft: 'rgba(43, 0, 24, 0.38)',
-  halo: 'rgba(241, 239, 235, 0.95)',
+  axisEdge: 'rgba(38, 40, 45, 0.24)', // filets de l'avenue Charles de Gaulle
+  labelAxis: 'rgba(38, 40, 45, 0.86)',
+  labelMajor: 'rgba(38, 40, 45, 0.66)',
+  labelMinor: 'rgba(38, 40, 45, 0.48)',
+  labelPlace: 'rgba(38, 40, 45, 0.4)',
+  labelWater: '#7c8d95',
+  halo: '#ffffff',
+  haloLand: 'rgba(241, 239, 235, 0.95)',
 };
 
 const FONT = ['Noto Sans Regular'];
 const FONT_BOLD = ['Noto Sans Bold'];
 const FONT_ITALIC = ['Noto Sans Italic'];
 const NAME = ['coalesce', ['get', 'name:fr'], ['get', 'name'], ['get', 'name:latin'], ''];
+const AXIS_NAME = 'Avenue Charles de Gaulle';
 
 const cls = (...v) => ['match', ['get', 'class'], v, true, false];
+const sub = (...v) => ['match', ['get', 'subclass'], v, true, false];
 const notTunnel = ['!=', ['get', 'brunnel'], 'tunnel'];
-const zw = (pairs) => ['interpolate', ['exponential', 1.5], ['zoom'], ...pairs];
+const isAxis = ['all', ['==', ['get', 'name'], AXIS_NAME], cls('primary', 'trunk')];
+const zw = (...stops) => ['interpolate', ['exponential', 1.5], ['zoom'], ...stops.flat()];
+
+/* Largeurs des voies (px), par niveau hiérarchique. */
+const W_MINOR = zw([13.5, 0.5], [16, 3], [18, 9]);
+const W_MEDIUM = zw([12, 0.7], [16, 5], [18, 14]);
+const W_MAJOR = zw([11, 1], [16, 8], [18, 22]);
 
 export function buildStyle() {
   return {
@@ -54,66 +73,105 @@ export function buildStyle() {
     layers: [
       { id: 'background', type: 'background', paint: { 'background-color': C.land } },
 
-      // Végétation et eau, en aplats doux
-      { id: 'landcover-grass', type: 'fill', source: 'openmaptiles', 'source-layer': 'landcover',
-        filter: cls('grass'), paint: { 'fill-color': C.green } },
-      { id: 'landcover-wood', type: 'fill', source: 'openmaptiles', 'source-layer': 'landcover',
-        filter: cls('wood'), paint: { 'fill-color': C.wood } },
-      { id: 'landuse-green', type: 'fill', source: 'openmaptiles', 'source-layer': 'landuse',
-        filter: cls('cemetery', 'stadium', 'pitch', 'playground'), paint: { 'fill-color': C.green } },
-      { id: 'park', type: 'fill', source: 'openmaptiles', 'source-layer': 'park',
-        paint: { 'fill-color': C.green, 'fill-opacity': 0.7 } },
-      { id: 'water', type: 'fill', source: 'openmaptiles', 'source-layer': 'water',
-        filter: notTunnel, paint: { 'fill-color': C.water } },
+      /* Espaces verts : une seule teinte, surfaces homogènes.
+         Les jardins privés et massifs de fleurs (petites taches) ne sont pas dessinés. */
+      { id: 'green-wood', type: 'fill', source: 'openmaptiles', 'source-layer': 'landcover',
+        filter: cls('wood'), paint: { 'fill-color': C.green, 'fill-outline-color': C.green } },
+      { id: 'green-grass', type: 'fill', source: 'openmaptiles', 'source-layer': 'landcover',
+        filter: ['all', cls('grass'), ['!', sub('garden', 'flowerbed', 'allotments')]],
+        paint: { 'fill-color': C.green, 'fill-outline-color': C.green } },
+      { id: 'green-landuse', type: 'fill', source: 'openmaptiles', 'source-layer': 'landuse',
+        filter: cls('cemetery'), paint: { 'fill-color': C.green, 'fill-outline-color': C.green } },
+      { id: 'green-park', type: 'fill', source: 'openmaptiles', 'source-layer': 'park',
+        paint: { 'fill-color': C.green, 'fill-outline-color': C.green } },
 
-      // Bâti : aplats sans contour (« plan masse »)
-      { id: 'building', type: 'fill', source: 'openmaptiles', 'source-layer': 'building', minzoom: 13,
+      /* Eau */
+      { id: 'water', type: 'fill', source: 'openmaptiles', 'source-layer': 'water',
+        filter: notTunnel, paint: { 'fill-color': C.water, 'fill-outline-color': C.water } },
+      { id: 'waterway', type: 'line', source: 'openmaptiles', 'source-layer': 'waterway',
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: { 'line-color': C.water, 'line-width': zw([12, 0.8], [18, 4]) } },
+
+      /* Bâti : aplats très clairs, bords nets (antialiasing + contour de la même couleur),
+         en fondu à l'apparition pour garder une lecture d'îlots à petite échelle. */
+      { id: 'building', type: 'fill', source: 'openmaptiles', 'source-layer': 'building', minzoom: 14,
         paint: {
-          'fill-color': C.block,
-          'fill-antialias': false,
-          'fill-opacity': ['interpolate', ['linear'], ['zoom'], 13, 0, 14.5, 1],
+          'fill-color': C.building,
+          'fill-outline-color': C.building,
+          'fill-antialias': true,
+          'fill-opacity': ['interpolate', ['linear'], ['zoom'], 14, 0, 15.2, 1],
         } },
 
-      // Rues en négatif, sans bordure
-      { id: 'street-minor', type: 'line', source: 'openmaptiles', 'source-layer': 'transportation', minzoom: 13,
+      /* Voirie : trois niveaux, en blanc, sans bordure. Ni chemins, ni tunnels, ni voies de service isolées. */
+      { id: 'street-minor', type: 'line', source: 'openmaptiles', 'source-layer': 'transportation', minzoom: 13.5,
         filter: ['all', notTunnel, cls('minor', 'service')],
         layout: { 'line-cap': 'round', 'line-join': 'round' },
-        paint: { 'line-color': C.street, 'line-width': zw([13, 0.6, 18, 12]) } },
-      { id: 'street-major', type: 'line', source: 'openmaptiles', 'source-layer': 'transportation',
-        filter: ['all', notTunnel, cls('motorway', 'trunk', 'primary', 'secondary', 'tertiary')],
+        paint: { 'line-color': C.street, 'line-width': W_MINOR } },
+      { id: 'street-medium', type: 'line', source: 'openmaptiles', 'source-layer': 'transportation',
+        filter: ['all', notTunnel, cls('secondary', 'tertiary')],
         layout: { 'line-cap': 'round', 'line-join': 'round' },
-        paint: { 'line-color': C.street, 'line-width': zw([11, 1.2, 18, 28]) } },
+        paint: { 'line-color': C.street, 'line-width': W_MEDIUM } },
+      { id: 'street-major', type: 'line', source: 'openmaptiles', 'source-layer': 'transportation',
+        filter: ['all', notTunnel, cls('primary', 'trunk', 'motorway')],
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: { 'line-color': C.street, 'line-width': W_MAJOR } },
 
-      // Libellés : grands axes en petites capitales, petites rues seulement de très près
+      /* Avenue Charles de Gaulle : double filet fin de part et d'autre de la chaussée. */
+      { id: 'axis-cdg-edges', type: 'line', source: 'openmaptiles', 'source-layer': 'transportation_name', minzoom: 13,
+        filter: isAxis,
+        layout: { 'line-cap': 'butt', 'line-join': 'round' },
+        paint: {
+          'line-color': C.axisEdge,
+          'line-width': ['interpolate', ['linear'], ['zoom'], 13, 0.6, 17, 1],
+          'line-gap-width': zw([11, 1], [16, 9], [18, 23]),
+        } },
+
+      /* Libellés */
       { id: 'water-name', type: 'symbol', source: 'openmaptiles', 'source-layer': 'water_name',
         layout: {
-          'text-field': NAME, 'text-font': FONT_ITALIC, 'text-size': 13, 'text-letter-spacing': 0.12,
-          'symbol-placement': ['step', ['zoom'], 'point', 13, 'line'],
+          'text-field': NAME, 'text-font': FONT_ITALIC, 'text-size': 12.5, 'text-letter-spacing': 0.14,
+          'symbol-placement': ['step', ['zoom'], 'point', 13, 'line'], 'symbol-spacing': 600,
         },
-        paint: { 'text-color': C.waterLabel, 'text-halo-color': C.halo, 'text-halo-width': 1 } },
-      { id: 'street-name-major', type: 'symbol', source: 'openmaptiles', 'source-layer': 'transportation_name', minzoom: 14,
-        filter: cls('trunk', 'primary', 'secondary'),
+        paint: { 'text-color': C.labelWater, 'text-halo-color': C.haloLand, 'text-halo-width': 1 } },
+      { id: 'axis-cdg-name', type: 'symbol', source: 'openmaptiles', 'source-layer': 'transportation_name', minzoom: 13,
+        filter: isAxis,
         layout: {
           'text-field': ['upcase', NAME], 'text-font': FONT_BOLD,
-          'text-size': zw([14, 9, 18, 11.5]), 'text-letter-spacing': 0.16,
-          'symbol-placement': 'line', 'symbol-spacing': 420, 'text-max-angle': 25,
+          'text-size': zw([13, 10], [18, 13]), 'text-letter-spacing': 0.2,
+          'symbol-placement': 'line', 'symbol-spacing': 520, 'text-max-angle': 20, 'text-padding': 6,
         },
-        paint: { 'text-color': C.label, 'text-halo-color': C.street, 'text-halo-width': 1.2 } },
-      { id: 'street-name-minor', type: 'symbol', source: 'openmaptiles', 'source-layer': 'transportation_name', minzoom: 16.8,
-        filter: cls('tertiary', 'minor'),
+        paint: { 'text-color': C.labelAxis, 'text-halo-color': C.halo, 'text-halo-width': 1.4 } },
+      { id: 'street-name-major', type: 'symbol', source: 'openmaptiles', 'source-layer': 'transportation_name', minzoom: 14,
+        filter: ['all', cls('trunk', 'primary', 'secondary'), ['!', isAxis]],
         layout: {
-          'text-field': NAME, 'text-font': FONT, 'text-size': 11,
-          'symbol-placement': 'line', 'symbol-spacing': 360, 'text-max-angle': 25,
+          'text-field': ['upcase', NAME], 'text-font': FONT,
+          'text-size': zw([14, 9], [18, 11.5]), 'text-letter-spacing': 0.16,
+          'symbol-placement': 'line', 'symbol-spacing': 700, 'text-max-angle': 20, 'text-padding': 6,
         },
-        paint: { 'text-color': C.labelSoft, 'text-halo-color': C.street, 'text-halo-width': 1.2 } },
-      { id: 'place-city', type: 'symbol', source: 'openmaptiles', 'source-layer': 'place', maxzoom: 15.5,
+        paint: { 'text-color': C.labelMajor, 'text-halo-color': C.halo, 'text-halo-width': 1.3 } },
+      { id: 'street-name-medium', type: 'symbol', source: 'openmaptiles', 'source-layer': 'transportation_name', minzoom: 15,
+        filter: cls('tertiary'),
+        layout: {
+          'text-field': ['upcase', NAME], 'text-font': FONT,
+          'text-size': zw([15, 9], [18, 11]), 'text-letter-spacing': 0.14,
+          'symbol-placement': 'line', 'symbol-spacing': 700, 'text-max-angle': 20, 'text-padding': 6,
+        },
+        paint: { 'text-color': C.labelMajor, 'text-halo-color': C.halo, 'text-halo-width': 1.3 } },
+      { id: 'street-name-minor', type: 'symbol', source: 'openmaptiles', 'source-layer': 'transportation_name', minzoom: 16.6,
+        filter: cls('minor'),
+        layout: {
+          'text-field': NAME, 'text-font': FONT, 'text-size': 10.5, 'text-letter-spacing': 0.03,
+          'symbol-placement': 'line', 'symbol-spacing': 520, 'text-max-angle': 20, 'text-padding': 6,
+        },
+        paint: { 'text-color': C.labelMinor, 'text-halo-color': C.halo, 'text-halo-width': 1.3 } },
+      { id: 'place-name', type: 'symbol', source: 'openmaptiles', 'source-layer': 'place', maxzoom: 15.2,
         filter: cls('city', 'town', 'village', 'suburb'),
         layout: {
           'text-field': ['upcase', NAME], 'text-font': FONT_BOLD,
-          'text-size': ['interpolate', ['linear'], ['zoom'], 11, 11, 15, 13], 'text-letter-spacing': 0.24,
+          'text-size': ['interpolate', ['linear'], ['zoom'], 11, 10.5, 15, 12.5], 'text-letter-spacing': 0.3,
           'text-max-width': 9,
         },
-        paint: { 'text-color': C.labelSoft, 'text-halo-color': C.halo, 'text-halo-width': 1.4 } },
+        paint: { 'text-color': C.labelPlace, 'text-halo-color': C.haloLand, 'text-halo-width': 1.4 } },
     ],
   };
 }

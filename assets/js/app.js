@@ -193,7 +193,11 @@ function focusGeoJSON() {
   return { type: 'FeatureCollection', features };
 }
 
-/** Pictogramme de lieu dessiné en SVG puis enregistré comme image de la carte (@2x). */
+/* Les images de la carte sont générées à la résolution réelle de l'écran (×2 ou ×3) pour rester nettes. */
+const DPR = Math.min(3, Math.max(2, Math.ceil(window.devicePixelRatio || 1)));
+const px = (size) => size * (DPR / 2); // les dimensions ci-dessous sont exprimées en unités @2x
+
+/** Pictogramme de lieu dessiné en SVG puis enregistré comme image de la carte. */
 function markerSvg(glyph, active) {
   const size = active ? 96 : 70;
   const c = size / 2;
@@ -202,11 +206,11 @@ function markerSvg(glyph, active) {
   const s = gs / 24;
   const t = c - gs / 2;
   const fill = active ? BRAND.prune : '#ffffff';
-  const ring = active ? '#ffffff' : 'rgba(43,0,24,0.2)';
+  const ring = active ? '#ffffff' : 'rgba(43,4,26,0.2)';
   const glyphColor = active ? '#ffffff' : BRAND.prune;
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${px(size)}" height="${px(size)}" viewBox="0 0 ${size} ${size}">
     <defs><filter id="sh" x="-40%" y="-40%" width="180%" height="180%">
-      <feDropShadow dx="0" dy="${active ? 4 : 2}" stdDeviation="${active ? 4 : 2.4}" flood-color="#2b0018" flood-opacity="${active ? 0.35 : 0.22}"/>
+      <feDropShadow dx="0" dy="${active ? 4 : 2}" stdDeviation="${active ? 4 : 2.4}" flood-color="${BRAND.prune}" flood-opacity="${active ? 0.35 : 0.22}"/>
     </filter></defs>
     ${active ? `<circle cx="${c}" cy="${c}" r="${r + 6}" fill="${BRAND.rose}" opacity="0.9"/>` : ''}
     <circle cx="${c}" cy="${c}" r="${r}" fill="${fill}" stroke="${ring}" stroke-width="${active ? 4 : 2}" filter="url(#sh)"/>
@@ -223,16 +227,32 @@ function loadImage(svg) {
   });
 }
 
+/** Point aubergine de la vue d'ensemble (14 px), cerclé de blanc. */
+function dotSvg() {
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${px(28)}" height="${px(28)}" viewBox="0 0 28 28">
+    <circle cx="14" cy="14" r="9" fill="${BRAND.prune}" fill-opacity="0.92" stroke="#ffffff" stroke-width="4"/>
+  </svg>`;
+}
+
+/** Zone invisible couvrant le marqueur Ocellis : les noms de rues ne passent pas dessous. */
+function officeShieldSvg() {
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${px(132)}" height="${px(210)}" viewBox="0 0 132 210"><rect width="132" height="210" fill="none"/></svg>`;
+}
+
 async function registerIcons() {
   const names = new Set(Object.values(TYPES).map((t) => t.icon));
   names.add('map-pin');
+  const extra = [['poi-dot', dotSvg()], ['office-shield', officeShieldSvg()]];
+  await Promise.all(extra.map(async ([id, svg]) => {
+    if (!map.hasImage(id)) map.addImage(id, await loadImage(svg), { pixelRatio: DPR });
+  }));
   await Promise.all([...names].flatMap((name) => {
     const glyph = LUCIDE[name] || CUSTOM_ICONS[name];
     return [false, true].map(async (active) => {
       const id = `poi-${name}${active ? '-active' : ''}`;
       if (map.hasImage(id)) return;
       const img = await loadImage(markerSvg(glyph, active));
-      if (!map.hasImage(id)) map.addImage(id, img, { pixelRatio: 2 });
+      if (!map.hasImage(id)) map.addImage(id, img, { pixelRatio: DPR });
     });
   }));
 }
@@ -311,7 +331,11 @@ function initMap() {
     map.addLayer({
       id: 'rings-label', type: 'symbol', source: 'rings', filter: ['==', ['geometry-type'], 'Point'],
       layout: { 'text-field': ['get', 'label'], 'text-font': ['Noto Sans Bold'], 'text-size': 11.5, 'text-letter-spacing': 0.03, 'text-allow-overlap': true },
-      paint: { 'text-color': BRAND.prune, 'text-halo-color': 'rgba(241,239,235,0.95)', 'text-halo-width': 2 },
+      paint: {
+        'text-color': BRAND.prune, 'text-halo-color': 'rgba(241,239,235,0.95)', 'text-halo-width': 2,
+        // De loin, le libellé du petit cercle passerait sous le marqueur Ocellis : on le masque.
+        'text-opacity': ['step', ['zoom'], ['case', ['==', ['get', 'min'], 5], 0, 1], 14.8, 1],
+      },
     });
     map.addLayer({
       id: 'transit-casing', type: 'line', source: 'lines',
@@ -321,17 +345,17 @@ function initMap() {
     map.addLayer({
       id: 'transit', type: 'line', source: 'lines',
       layout: { 'line-cap': 'round', 'line-join': 'round' },
-      paint: { 'line-color': ['get', 'color'], 'line-width': ['interpolate', ['linear'], ['zoom'], 13, 1.6, 18, 4], 'line-opacity': 0.6 },
+      paint: { 'line-color': ['get', 'color'], 'line-width': ['interpolate', ['linear'], ['zoom'], 13, 1.4, 18, 3.5], 'line-opacity': 0.45 },
     });
     // Vue d'ensemble : de simples points aubergine, pour une carte épurée.
     map.addLayer({
-      id: 'places-dot', type: 'circle', source: 'places',
-      paint: {
-        'circle-color': BRAND.prune,
-        'circle-radius': ['interpolate', ['linear'], ['zoom'], 13, 2.6, 15, 4, 16.5, 5],
-        'circle-stroke-color': '#ffffff',
-        'circle-stroke-width': ['interpolate', ['linear'], ['zoom'], 13, 1, 16, 2],
-        'circle-opacity': 0.9,
+      id: 'places-dot', type: 'symbol', source: 'places',
+      layout: {
+        'icon-image': 'poi-dot',
+        'icon-size': ['interpolate', ['linear'], ['zoom'], 13, 0.55, 15, 0.8, 16.5, 1],
+        'icon-allow-overlap': true,
+        'icon-padding': 1,
+        'symbol-sort-key': ['-', 0, ['get', 'd']],
       },
     });
     // De près, ou quand une catégorie est choisie : les pictogrammes.
@@ -351,6 +375,11 @@ function initMap() {
         'text-optional': true,
       },
       paint: { 'text-color': BRAND.ink, 'text-halo-color': 'rgba(241,239,235,0.95)', 'text-halo-width': 1.6 },
+    });
+    map.addSource('office', { type: 'geojson', data: { type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: [office.lon, office.lat] } } });
+    map.addLayer({
+      id: 'office-shield', type: 'symbol', source: 'office',
+      layout: { 'icon-image': 'office-shield', 'icon-anchor': 'bottom', 'icon-allow-overlap': true },
     });
     map.addLayer({
       id: 'focus', type: 'symbol', source: 'focus',
