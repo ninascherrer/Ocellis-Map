@@ -42,7 +42,7 @@ const ICONS = [
   // bien-être
   'dumbbell', 'waves-ladder', 'trees', 'mountain', 'trophy',
   // restaurants
-  'coffee', 'croissant', 'sandwich', 'ice-cream-cone',
+  'coffee', 'croissant', 'sandwich', 'ice-cream-cone', 'beer',
   // courses
   'shopping-cart', 'store', 'apple', 'beef', 'wine', 'fish', 'cake-slice', 'candy', 'snowflake', 'milk',
   // santé

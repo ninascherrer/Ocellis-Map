@@ -34,6 +34,7 @@ export const TYPES = {
   jardin: { label: 'Jardin & square', icon: 'trees' },
   // Restaurants
   restaurant: { label: 'Restaurant', icon: 'utensils' },
+  brasserie: { label: 'Brasserie', icon: 'beer' },
   'sur-le-pouce': { label: 'Sur le pouce', icon: 'sandwich' },
   cafe: { label: 'Café', icon: 'coffee' },
   boulangerie: { label: 'Boulangerie', icon: 'croissant' },
@@ -69,7 +70,7 @@ export const TYPES = {
 /** Ordre d'affichage des sous-filtres par catégorie. */
 export const TYPE_ORDER = {
   'bien-etre': ['sport', 'piscine', 'parc', 'jardin'],
-  restaurants: ['restaurant', 'sur-le-pouce', 'cafe', 'boulangerie', 'glacier'],
+  restaurants: ['restaurant', 'brasserie', 'sur-le-pouce', 'cafe', 'boulangerie', 'glacier'],
   courses: ['supermarche', 'superette', 'primeur', 'boucherie', 'fromagerie', 'poissonnerie', 'epicerie-fine', 'marche', 'caviste', 'patisserie', 'chocolatier', 'surgeles'],
   sante: ['pharmacie', 'hopital', 'clinique', 'centre-medical'],
   transports: ['metro', 'rer', 'tram', 'bus', 'velib', 'parking-velo', 'parking'],

@@ -26,7 +26,7 @@ const OFFICE_QUERY = '96 avenue Charles de Gaulle 92200 Neuilly-sur-Seine';
 
 /* Rayons de recherche (mètres, à vol d'oiseau depuis les bureaux). */
 const RADIUS = {
-  restaurant: 800, cafe: 800, boulangerie: 900, 'sur-le-pouce': 800, glacier: 900,
+  restaurant: 800, brasserie: 900, cafe: 800, boulangerie: 900, 'sur-le-pouce': 800, glacier: 900,
   supermarche: 1000, superette: 800, primeur: 900, boucherie: 900, 'epicerie-fine': 900,
   marche: 1200, fromagerie: 900, poissonnerie: 900, caviste: 900, patisserie: 900, chocolatier: 900, surgeles: 1000,
   sport: 1500, piscine: 2500, parc: 1300, jardin: 1000,
@@ -45,7 +45,7 @@ const BIG_PARKS = /bois de boulogne|parc de bagatelle/;
  * Un lieu « epingler: true » dans data/curation.json est toujours conservé.
  */
 const SELECTION = {
-  restaurants: { restaurant: 4, cafe: 2, boulangerie: 1, 'sur-le-pouce': 1 },
+  restaurants: { restaurant: 4, brasserie: 2, cafe: 2, boulangerie: 1, 'sur-le-pouce': 1 },
   courses: { 'supermarche+superette': 3 },
   'bien-etre': { sport: 1, piscine: 1, 'parc+jardin': 3 },
   sante: { pharmacie: 2, hopital: 1 },
@@ -171,6 +171,7 @@ function classify(p) {
   const c = p.class, s = p.subclass, name = p.name || '';
   const n = norm(name);
   // Restaurants & cafés
+  if (['restaurant', 'cafe', 'bar'].includes(c) && /brasserie/.test(n)) return ['restaurants', 'brasserie'];
   if (c === 'restaurant') return ['restaurants', 'restaurant'];
   if (c === 'fast_food') return ['restaurants', 'sur-le-pouce'];
   if (c === 'cafe') return ['restaurants', 'cafe'];
@@ -349,7 +350,7 @@ async function mapLimit(items, limit, fn) {
 /* --------------------------------------------------------------------------------------------- */
 
 const SUB_LABEL = {
-  restaurant: 'Restaurant', 'sur-le-pouce': 'Sur le pouce', cafe: 'Café', boulangerie: 'Boulangerie', glacier: 'Glacier',
+  restaurant: 'Restaurant', brasserie: 'Brasserie', 'sur-le-pouce': 'Sur le pouce', cafe: 'Café', boulangerie: 'Boulangerie', glacier: 'Glacier',
   supermarche: 'Supermarché', superette: 'Supérette', primeur: 'Primeur', boucherie: 'Boucherie', 'epicerie-fine': 'Épicerie fine',
   marche: 'Marché', fromagerie: 'Fromagerie', poissonnerie: 'Poissonnerie', caviste: 'Caviste', patisserie: 'Pâtisserie',
   chocolatier: 'Chocolatier', surgeles: 'Surgelés',
@@ -508,6 +509,7 @@ async function main() {
     const m = mods[p.id];
     if (!m) continue;
     if (m.nom) p.name = m.nom;
+    if (m.type) p.sub = m.type; // ex. un café qui est en fait une brasserie
     if (m.note) p.note = m.note;
     if (m.coupDeCoeur) p.favorite = true;
     if (m.dejeunerPro) p.businessLunch = true;

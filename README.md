@@ -15,8 +15,8 @@ Elle aide les collaborateurs à repérer rapidement les restaurants, commerces, 
 
 - **Les bureaux au centre de l'expérience.** Un marqueur aubergine avec le symbole officiel Ocellis, plus grand que les autres repères. Au clic, une fiche affiche « Nos nouveaux bureaux », l'adresse complète, le métro et le RER les plus proches, ainsi qu'un bouton **Lancer l'itinéraire** (Google Maps, avec Citymapper, Plans et Waze en liens secondaires).
 - **Bouton permanent « Recentrer sur Ocellis ».** Au chargement, la carte est centrée sur les bureaux.
-- **Une sélection courte de 28 lieux essentiels**, et non un annuaire : les plus proches et les plus utiles au quotidien, répartis en cinq catégories filtrables (détail des règles plus bas) :
-  - **Restaurants** (8) : 4 restaurants, 2 cafés, 1 boulangerie, 1 adresse « sur le pouce ». Un filtre « Déjeuner pro » apparaît dès que l'équipe a recommandé des adresses (voir [Curation](#curation-par-léquipe)).
+- **Une sélection courte de 30 lieux essentiels**, et non un annuaire : les plus proches et les plus utiles au quotidien, répartis en cinq catégories filtrables (détail des règles plus bas) :
+  - **Restaurants** (10) : 4 restaurants, 2 brasseries, 2 cafés, 1 boulangerie, 1 adresse « sur le pouce ». Un filtre « Déjeuner pro » apparaît dès que l'équipe a recommandé des adresses (voir [Curation](#curation-par-léquipe)).
   - **Courses** (3) : supermarchés et supérettes, une seule adresse par enseigne.
   - **Bien-être** (5) : une salle de sport, la piscine, deux jardins proches et la lisière du Bois de Boulogne (environ 400 m).
   - **Urgences & santé** (3) : les 2 pharmacies les plus proches, l'hôpital le plus proche, et un encart avec les numéros d'urgence (15, 18, 17, 112, 114, 3237).
@@ -113,6 +113,7 @@ Seuls les tracés des lignes desservant les stations retenues sont conservés.
 *(L'exemple ci-dessus est fictif : identifiants, coordonnées et horaires sont à remplacer par les vrais.)*
 
 - L'identifiant d'un lieu (`id`) figure dans `data/quartier.json`. Il apparaît aussi dans l'URL quand on partage sa fiche (`#lieu=…`).
+- `type` reclasse un lieu : par exemple, le Café de la Porte des Sablons, référencé « Café, bar, brasserie » par Acceslibre, est classé comme brasserie.
 - `epingler: true` affiche toujours un lieu, même s'il ne fait pas partie de la sélection automatique. `masquer: true` le retire. Les lieux de `ajouts` sont toujours affichés : c'est le moyen d'ajouter par exemple une salle de sport absente des données ouvertes, comme Fitness Park.
 - `dejeunerPro: true` fait apparaître le filtre **Déjeuner pro** dans la catégorie Restaurants. Aucune source ouverte ne fournit cette information de façon fiable : c'est à l'équipe de la renseigner.
 - Catégories : `bien-etre`, `restaurants`, `courses`, `sante`, `transports`. Les types disponibles sont listés dans `assets/js/config.js` (`TYPES`).
