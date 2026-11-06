@@ -263,7 +263,7 @@ a { color: inherit; }
   white-space: nowrap;
   transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.15s var(--ease);
 }
-.chip .ico { width: 17px; height: 17px; color: var(--prune); transition: color 0.15s; }
+.chip .ico { width: 17px; height: 17px; color: var(--cat, var(--prune)); transition: color 0.15s; }
 .chip__count {
   min-width: 22px;
   padding: 1px 6px;
@@ -330,10 +330,11 @@ a { color: inherit; }
   width: 40px; height: 40px;
   border-radius: 50%;
   background: var(--white);
-  color: var(--prune);
-  box-shadow: inset 0 0 0 1px var(--prune-a14);
+  background: color-mix(in srgb, var(--cat, var(--prune)) 12%, var(--white));
+  color: var(--cat, var(--prune));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cat, var(--prune)) 22%, transparent);
 }
-.result:hover .result__icon, .result.is-active .result__icon { background: var(--prune); color: var(--white); box-shadow: none; }
+.result:hover .result__icon, .result.is-active .result__icon { background: var(--cat, var(--prune)); color: var(--white); box-shadow: none; }
 .result__icon .ico { width: 19px; height: 19px; }
 .result__body { min-width: 0; }
 .result__name {
@@ -462,12 +463,6 @@ a { color: inherit; }
   color: var(--ink-2);
 }
 .legend strong { color: var(--prune); font-weight: 500; }
-.legend__hint {
-  display: inline-flex; align-items: center; gap: 8px;
-  margin-left: 4px; padding-left: 12px;
-  border-left: 1px solid var(--line);
-}
-.legend__dot { width: 9px; height: 9px; border-radius: 50%; background: var(--prune); box-shadow: 0 0 0 2px var(--white); }
 .legend__ring {
   width: 18px; height: 18px;
   border: 1.5px dashed var(--prune);
@@ -597,7 +592,7 @@ a { color: inherit; }
   display: grid; place-items: center;
   width: 28px; height: 28px;
   border-radius: 50%;
-  background: var(--prune);
+  background: var(--cat, var(--prune));
   color: var(--white);
 }
 .card__kicker-icon .ico { width: 15px; height: 15px; }

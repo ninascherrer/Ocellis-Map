@@ -1,6 +1,6 @@
 import * as maplibregl from '../../vendor/maplibre-gl/maplibre-gl.mjs';
 import { buildStyle, BRAND } from './map-style.js';
-import { CATEGORIES, TYPES, TYPE_ORDER, CUSTOM_ICONS, EMERGENCY_NUMBERS, WALK, WALK_RINGS } from './config.js';
+import { CATEGORIES, CATEGORY_COLOR, TYPES, TYPE_ORDER, CUSTOM_ICONS, EMERGENCY_NUMBERS, WALK, WALK_RINGS } from './config.js';
 import { LUCIDE } from './icons.js';
 
 /* ==========================================================================
@@ -173,7 +173,7 @@ function placesGeoJSON() {
     type: 'FeatureCollection',
     features: visiblePlaces().map((p) => ({
       type: 'Feature',
-      properties: { id: p.id, name: p.name, icon: `poi-${typeIcon(p)}`, d: p.distance, fav: p.favorite ? 1 : 0 },
+      properties: { id: p.id, name: p.name, icon: markerId(p), d: p.distance, fav: p.favorite ? 1 : 0 },
       geometry: { type: 'Point', coordinates: [p.lon, p.lat] },
     })),
   };
@@ -186,7 +186,7 @@ function focusGeoJSON() {
     if (!p || (kind === 'hover' && id === state.selectedId)) continue;
     features.push({
       type: 'Feature',
-      properties: { id, kind, icon: `poi-${typeIcon(p)}-active` },
+      properties: { id, kind, icon: `${markerId(p)}-active` },
       geometry: { type: 'Point', coordinates: [p.lon, p.lat] },
     });
   }
@@ -197,24 +197,26 @@ function focusGeoJSON() {
 const DPR = Math.min(3, Math.max(2, Math.ceil(window.devicePixelRatio || 1)));
 const px = (size) => size * (DPR / 2); // les dimensions ci-dessous sont exprimées en unités @2x
 
-/** Pictogramme de lieu dessiné en SVG puis enregistré comme image de la carte. */
-function markerSvg(glyph, active) {
-  const size = active ? 96 : 70;
+const markerId = (p) => `poi-${p.cat}-${typeIcon(p)}`;
+
+/**
+ * Pastille de lieu : disque à la couleur de la catégorie, pictogramme blanc, liseré blanc.
+ * 40 px à l'écran (52 px quand le lieu est sélectionné ou survolé, avec un anneau aubergine).
+ */
+function markerSvg(glyph, color, active) {
+  const size = active ? 128 : 96; // unités @2x, marge comprise pour l'ombre
   const c = size / 2;
-  const r = active ? 37 : 27;
-  const gs = active ? 38 : 31;
+  const r = active ? 46 : 36; // rayon du disque
+  const gs = active ? 46 : 36; // taille du pictogramme
   const s = gs / 24;
   const t = c - gs / 2;
-  const fill = active ? BRAND.prune : '#ffffff';
-  const ring = active ? '#ffffff' : 'rgba(43,4,26,0.2)';
-  const glyphColor = active ? '#ffffff' : BRAND.prune;
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${px(size)}" height="${px(size)}" viewBox="0 0 ${size} ${size}">
     <defs><filter id="sh" x="-40%" y="-40%" width="180%" height="180%">
-      <feDropShadow dx="0" dy="${active ? 4 : 2}" stdDeviation="${active ? 4 : 2.4}" flood-color="${BRAND.prune}" flood-opacity="${active ? 0.35 : 0.22}"/>
+      <feDropShadow dx="0" dy="${active ? 5 : 3}" stdDeviation="${active ? 5 : 3.5}" flood-color="#26282d" flood-opacity="${active ? 0.3 : 0.2}"/>
     </filter></defs>
-    ${active ? `<circle cx="${c}" cy="${c}" r="${r + 6}" fill="${BRAND.rose}" opacity="0.9"/>` : ''}
-    <circle cx="${c}" cy="${c}" r="${r}" fill="${fill}" stroke="${ring}" stroke-width="${active ? 4 : 2}" filter="url(#sh)"/>
-    <g transform="translate(${t} ${t}) scale(${s})" fill="none" stroke="${glyphColor}" stroke-width="${active ? 2 : 2.1}" stroke-linecap="round" stroke-linejoin="round">${glyph}</g>
+    ${active ? `<circle cx="${c}" cy="${c}" r="${r + 9}" fill="none" stroke="${BRAND.prune}" stroke-width="4"/>` : ''}
+    <circle cx="${c}" cy="${c}" r="${r}" fill="${color}" stroke="#ffffff" stroke-width="${active ? 6 : 5}" filter="url(#sh)"/>
+    <g transform="translate(${t} ${t}) scale(${s})" fill="none" stroke="#ffffff" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">${glyph}</g>
   </svg>`;
 }
 
@@ -227,31 +229,25 @@ function loadImage(svg) {
   });
 }
 
-/** Point aubergine de la vue d'ensemble (14 px), cerclé de blanc. */
-function dotSvg() {
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${px(28)}" height="${px(28)}" viewBox="0 0 28 28">
-    <circle cx="14" cy="14" r="9" fill="${BRAND.prune}" fill-opacity="0.92" stroke="#ffffff" stroke-width="4"/>
-  </svg>`;
-}
-
 /** Zone invisible couvrant le marqueur Ocellis : les noms de rues ne passent pas dessous. */
 function officeShieldSvg() {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${px(132)}" height="${px(210)}" viewBox="0 0 132 210"><rect width="132" height="210" fill="none"/></svg>`;
 }
 
 async function registerIcons() {
-  const names = new Set(Object.values(TYPES).map((t) => t.icon));
-  names.add('map-pin');
-  const extra = [['poi-dot', dotSvg()], ['office-shield', officeShieldSvg()]];
-  await Promise.all(extra.map(async ([id, svg]) => {
-    if (!map.hasImage(id)) map.addImage(id, await loadImage(svg), { pixelRatio: DPR });
-  }));
-  await Promise.all([...names].flatMap((name) => {
+  if (!map.hasImage('office-shield')) map.addImage('office-shield', await loadImage(officeShieldSvg()), { pixelRatio: DPR });
+  const combos = new Set();
+  for (const c of CATEGORIES) {
+    for (const t of TYPE_ORDER[c.id]) combos.add(`${c.id}|${TYPES[t].icon}`);
+    combos.add(`${c.id}|map-pin`);
+  }
+  await Promise.all([...combos].flatMap((combo) => {
+    const [cat, name] = combo.split('|');
     const glyph = LUCIDE[name] || CUSTOM_ICONS[name];
     return [false, true].map(async (active) => {
-      const id = `poi-${name}${active ? '-active' : ''}`;
+      const id = `poi-${cat}-${name}${active ? '-active' : ''}`;
       if (map.hasImage(id)) return;
-      const img = await loadImage(markerSvg(glyph, active));
+      const img = await loadImage(markerSvg(glyph, CATEGORY_COLOR[cat], active));
       if (!map.hasImage(id)) map.addImage(id, img, { pixelRatio: DPR });
     });
   }));
@@ -330,7 +326,7 @@ function initMap() {
     });
     map.addLayer({
       id: 'rings-label', type: 'symbol', source: 'rings', filter: ['==', ['geometry-type'], 'Point'],
-      layout: { 'text-field': ['get', 'label'], 'text-font': ['Noto Sans Bold'], 'text-size': 11.5, 'text-letter-spacing': 0.03, 'text-allow-overlap': true },
+      layout: { 'text-field': ['get', 'label'], 'text-font': ['Noto Sans Bold'], 'text-size': 11.5, 'text-letter-spacing': 0.03, 'text-padding': 4 },
       paint: {
         'text-color': BRAND.prune, 'text-halo-color': 'rgba(241,239,235,0.95)', 'text-halo-width': 2,
         // De loin, le libellé du petit cercle passerait sous le marqueur Ocellis : on le masque.
@@ -347,34 +343,33 @@ function initMap() {
       layout: { 'line-cap': 'round', 'line-join': 'round' },
       paint: { 'line-color': ['get', 'color'], 'line-width': ['interpolate', ['linear'], ['zoom'], 13, 1.4, 18, 3.5], 'line-opacity': 0.45 },
     });
-    // Vue d'ensemble : de simples points aubergine, pour une carte épurée.
+    // Une sélection courte de lieux : pastilles colorées toujours visibles, noms affichés là où il y a la place.
+    // Deux couches : les pastilles (au-dessus) sont placées en premier, les noms (dessous) évitent ensuite
+    // toutes les pastilles, si bien qu'aucun nom ne passe sous un marqueur.
     map.addLayer({
-      id: 'places-dot', type: 'symbol', source: 'places',
+      id: 'places-label', type: 'symbol', source: 'places', minzoom: 15,
       layout: {
-        'icon-image': 'poi-dot',
-        'icon-size': ['interpolate', ['linear'], ['zoom'], 13, 0.55, 15, 0.8, 16.5, 1],
-        'icon-allow-overlap': true,
-        'icon-padding': 1,
-        'symbol-sort-key': ['-', 0, ['get', 'd']],
+        'text-field': ['get', 'name'],
+        'text-font': ['Noto Sans Bold'],
+        'text-size': ['interpolate', ['linear'], ['zoom'], 15, 11, 18, 12.5],
+        'text-anchor': 'left',
+        // Décalage au-delà de l'emprise de la pastille (ombre comprise), pour ne pas la chevaucher.
+        'text-offset': ['interpolate', ['linear'], ['zoom'], 15, ['literal', [2.35, 0]], 18, ['literal', [2.3, 0]]],
+        'text-max-width': 9,
+        'text-padding': 1,
+        'symbol-sort-key': ['get', 'd'],
       },
+      paint: { 'text-color': BRAND.ink, 'text-halo-color': 'rgba(255,255,255,0.95)', 'text-halo-width': 1.8 },
     });
-    // De près, ou quand une catégorie est choisie : les pictogrammes.
     map.addLayer({
       id: 'places', type: 'symbol', source: 'places',
       layout: {
         'icon-image': ['get', 'icon'],
-        'icon-size': ['interpolate', ['linear'], ['zoom'], 14, 0.82, 16, 0.92, 18, 1.05],
+        'icon-size': ['interpolate', ['linear'], ['zoom'], 13, 0.62, 15, 0.88, 16, 1, 18, 1.08],
         'icon-allow-overlap': true,
-        'symbol-sort-key': ['-', 0, ['get', 'd']],
-        'text-field': ['step', ['zoom'], '', 17.2, ['get', 'name']],
-        'text-font': ['Noto Sans Regular'],
-        'text-size': 12,
-        'text-anchor': 'left',
-        'text-offset': [1.4, 0],
-        'text-max-width': 10,
-        'text-optional': true,
+        'icon-padding': 0,
+        'symbol-sort-key': ['-', 0, ['get', 'd']], // les plus proches dessinés au-dessus
       },
-      paint: { 'text-color': BRAND.ink, 'text-halo-color': 'rgba(241,239,235,0.95)', 'text-halo-width': 1.6 },
     });
     map.addSource('office', { type: 'geojson', data: { type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: [office.lon, office.lat] } } });
     map.addLayer({
@@ -385,14 +380,13 @@ function initMap() {
       id: 'focus', type: 'symbol', source: 'focus',
       layout: {
         'icon-image': ['get', 'icon'],
-        'icon-size': ['case', ['==', ['get', 'kind'], 'selected'], 1, 0.82],
+        'icon-size': ['case', ['==', ['get', 'kind'], 'selected'], 1, 0.9],
         'icon-allow-overlap': true,
         'icon-ignore-placement': true,
       },
     });
 
     updateTransitVisibility();
-    updateDetailZoom();
     createOcellisMarker();
     bindMapEvents();
     mapReady = true;
@@ -405,9 +399,9 @@ function initMap() {
 }
 
 function bindMapEvents() {
-  hoverTip = new maplibregl.Popup({ closeButton: false, closeOnClick: false, className: 'hover-tip', offset: 20, maxWidth: '260px' });
+  hoverTip = new maplibregl.Popup({ closeButton: false, closeOnClick: false, className: 'hover-tip', offset: 26, maxWidth: '260px' });
 
-  for (const layer of ['places', 'places-dot']) {
+  for (const layer of ['places']) {
     map.on('mouseenter', layer, () => { map.getCanvas().style.cursor = 'pointer'; });
     map.on('mousemove', layer, (e) => {
       const p = state.byId.get(e.features[0].properties.id);
@@ -427,9 +421,8 @@ function bindMapEvents() {
       select(e.features[0].properties.id, { fly: isMobile() });
     });
   }
-  map.on('zoomend', updateDetailZoom);
   map.on('click', (e) => {
-    const hit = map.queryRenderedFeatures(e.point, { layers: ['places', 'places-dot', 'focus'] });
+    const hit = map.queryRenderedFeatures(e.point, { layers: ['places', 'focus'] });
     if (!hit.length) deselect();
   });
 }
@@ -441,23 +434,6 @@ function refreshPlacesSource() {
 function refreshFocus() {
   map?.getSource('focus')?.setData(focusGeoJSON());
 }
-/**
- * Seuil d'apparition des pictogrammes : de près en vue « Tout voir »,
- * dès le niveau du quartier quand une seule catégorie (ou une recherche) réduit le nombre de lieux.
- */
-function detailZoom() {
-  const all = state.activeCats.size === CATEGORIES.length && !state.query;
-  return all ? 16.6 : 13.6;
-}
-function updateDetailZoom() {
-  if (!map?.getLayer('places')) return;
-  const z = detailZoom();
-  map.setLayerZoomRange('places', z, 24);
-  map.setLayerZoomRange('places-dot', 0, z);
-  const hint = $('#legend-hint');
-  if (hint) hint.hidden = map.getZoom() >= z;
-}
-
 function updateTransitVisibility() {
   if (!map?.getLayer('transit')) return;
   const v = state.activeCats.has('transports') ? 'visible' : 'none';
@@ -497,7 +473,7 @@ function select(id, { fly = true } = {}) {
     popup?.remove();
     popup = new maplibregl.Popup({
       className: `place-popup${isOffice ? ' is-ocellis' : ''}`,
-      offset: isOffice ? { bottom: [0, -82], top: [0, 0], left: [32, -40], right: [-32, -40] } : 24,
+      offset: isOffice ? { bottom: [0, -82], top: [0, 0], left: [32, -40], right: [-32, -40] } : 30,
       maxWidth: '340px',
       closeButton: false,
       focusAfterOpen: false,
@@ -617,7 +593,7 @@ function placeCard(p) {
   <article class="card">
     <button class="card__close" type="button" data-action="close" aria-label="Fermer">${ico('x')}</button>
     <div class="card__head">
-      <p class="card__kicker"><span class="card__kicker-icon">${ico(typeIcon(p))}</span>${esc(cat?.label || '')} · ${esc(typeLabel(p))}</p>
+      <p class="card__kicker"><span class="card__kicker-icon" style="--cat:${CATEGORY_COLOR[p.cat]}">${ico(typeIcon(p))}</span>${esc(cat?.label || '')} · ${esc(typeLabel(p))}</p>
       <h2 class="card__title">${esc(p.name)}</h2>
       ${p.address ? `<p class="card__address">${addressText(p.address)}</p>` : ''}
       <ul class="card__facts">${facts.join('')}</ul>
@@ -742,7 +718,7 @@ function renderFilters() {
   root.innerHTML = `
     <button class="chip chip--all" type="button" data-cat="*" aria-pressed="${all}">Tout voir</button>
     ${CATEGORIES.map((c) => `
-      <button class="chip" type="button" data-cat="${c.id}" aria-pressed="${!all && state.activeCats.has(c.id)}" title="${esc(c.blurb)}">
+      <button class="chip" type="button" data-cat="${c.id}" style="--cat:${c.color}" aria-pressed="${!all && state.activeCats.has(c.id)}" title="${esc(c.blurb)}">
         ${ico(c.icon)}<span>${esc(isMobile() ? c.short : c.label)}</span><span class="chip__count">${counts[c.id] || 0}</span>
       </button>`).join('')}`;
   root.querySelectorAll('.chip').forEach((b) => b.addEventListener('click', () => {
@@ -805,7 +781,7 @@ function resultItem(p) {
   return `
     <button class="result${p.id === state.selectedId ? ' is-active' : ''}" type="button" role="listitem" data-id="${esc(p.id)}"
       aria-label="${esc(`${p.name}, ${typeLabel(p)}, ${fmtWalk(p.distance)} à pied`)}">
-      <span class="result__icon">${ico(typeIcon(p))}</span>
+      <span class="result__icon" style="--cat:${CATEGORY_COLOR[p.cat]}">${ico(typeIcon(p))}</span>
       <span class="result__body">
         <span class="result__name">${esc(p.name)} ${fav}</span>
         <span class="result__meta">${meta}</span>
@@ -857,7 +833,6 @@ function applyFilters() {
   renderResults();
   refreshPlacesSource();
   updateTransitVisibility();
-  updateDetailZoom();
   if (state.selectedId && !isVisible(state.byId.get(state.selectedId))) deselect();
 }
 

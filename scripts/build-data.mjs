@@ -37,6 +37,21 @@ const RADIUS = {
 /* Grands espaces verts : leur point « centre » est loin, on les garde jusqu'à 3 km. */
 const BIG_PARKS = /bois de boulogne|parc de bagatelle/;
 
+/*
+ * Sélection éditoriale : la carte ne montre que l'essentiel.
+ * Quotas par catégorie puis par type (« a+b » = types mis en commun).
+ * Dans chaque groupe, on garde les lieux les plus proches à pied, pondérés par leur utilité
+ * (voir usefulness()), avec une seule adresse par enseigne.
+ * Un lieu « epingler: true » dans data/curation.json est toujours conservé.
+ */
+const SELECTION = {
+  restaurants: { restaurant: 4, cafe: 2, boulangerie: 1, 'sur-le-pouce': 1 },
+  courses: { 'supermarche+superette': 3 },
+  'bien-etre': { sport: 1, piscine: 1, 'parc+jardin': 3 },
+  sante: { pharmacie: 2, hopital: 1 },
+  transports: { metro: 2, rer: 1, bus: 2, velib: 2, parking: 1, 'parking-velo': 1 },
+};
+
 /* --------------------------------------------------------------------------------------------- */
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -347,6 +362,93 @@ function genericName(sub) {
   return { 'parking-velo': 'Parking vélos' }[sub] || SUB_LABEL[sub];
 }
 
+/* --------------------------------------------------------------------------------------------- */
+/* 6. Sélection éditoriale                                                                       */
+
+/** Coefficient appliqué à la distance : < 1 favorise un lieu, > 1 le pénalise. */
+function usefulness(p) {
+  const n = norm(p.name);
+  switch (p.sub) {
+    case 'sur-le-pouce':
+      return /mcdonald|burger king|kfc|quick|five guys|domino/.test(n) ? 4 : 1; // restauration rapide « de qualité »
+    case 'sport':
+      if (/fitness|gym|climbing|escalade|forme|sports? club|crossfit|yoga|pilates|boxe/.test(n)) return 1;
+      if (/stade|gymnase|complexe|espace sportif|centre sportif|tennis|nautique|aviron|danse/.test(n)) return 5;
+      return 2.5;
+    case 'parc':
+    case 'jardin':
+      if (/^place\b/.test(n)) return 6; // une place arborée n'est pas un parc
+      if (/acclimatation/.test(n)) return 3; // parc de loisirs payant
+      return 1;
+    case 'supermarche':
+    case 'superette':
+      return /^(superette|alimentation|epicerie|minimarche)/.test(n) ? 3 : 1; // enseignes identifiées d'abord
+    default:
+      return p.name === genericName(p.sub) && p.sub !== 'parking-velo' ? 5 : 1;
+  }
+}
+
+/** Enseigne approximative, pour éviter deux Monoprix ou deux Paul (mots génériques ignorés). */
+const GENERIC_WORDS = new Set(['le', 'la', 'les', 'l', 'au', 'aux', 'chez', 'de', 'du', 'des', 'cafe', 'restaurant', 'boulangerie', 'patisserie', 'brasserie', 'bistrot', 'maison']);
+function brand(p) {
+  const words = norm(p.name).split(' ');
+  return words.find((w) => !GENERIC_WORDS.has(w)) || norm(p.name);
+}
+const BRAND_DEDUP = new Set(['restaurants', 'courses']); // les chaînes n'existent que là
+
+/** Arrêts de bus : on retient ceux qui, ensemble, desservent le plus de lignes différentes. */
+function pickBusStops(stops, n) {
+  const chosen = [];
+  const covered = new Set();
+  const weight = (ref) => (/^N\d/.test(ref) ? 0.3 : 1); // Noctilien : utile, mais secondaire
+  while (chosen.length < n) {
+    let best = null;
+    for (const s of stops) {
+      if (chosen.includes(s)) continue;
+      const gain = s.lines.filter((l) => !covered.has(l.ref)).reduce((a, l) => a + weight(l.ref), 0);
+      const score = gain / (1 + s._d / 300);
+      if (gain > 0 && (!best || score > best.score)) best = { s, score };
+    }
+    if (!best) break;
+    chosen.push(best.s);
+    best.s.lines.forEach((l) => covered.add(l.ref));
+  }
+  return chosen;
+}
+
+function selectEssentials(places, office, pinned) {
+  for (const p of places) p._d = haversine(office.lat, office.lon, p.lat, p.lon);
+  const kept = new Set(places.filter((p) => pinned.has(p.id) || p.source === 'curation'));
+  for (const [cat, groups] of Object.entries(SELECTION)) {
+    for (const [group, quota] of Object.entries(groups)) {
+      const types = group.split('+');
+      let pool = places.filter((p) => p.cat === cat && types.includes(p.sub));
+      let room = quota - pool.filter((p) => kept.has(p)).length;
+      if (room <= 0) continue;
+      pool = pool.filter((p) => !kept.has(p));
+      if (group === 'bus') {
+        pickBusStops(pool, room).forEach((p) => kept.add(p));
+        continue;
+      }
+      if (group === 'parc+jardin') {
+        // Le Bois de Boulogne, à quelques minutes, figure toujours dans la sélection.
+        const bois = pool.find((p) => /bois de boulogne/.test(norm(p.name)));
+        if (bois) { kept.add(bois); room--; pool = pool.filter((p) => p !== bois); }
+      }
+      const dedup = BRAND_DEDUP.has(cat);
+      const brands = new Set([...kept].filter((p) => p.cat === cat).map(brand));
+      for (const p of pool.sort((a, b) => a._d * usefulness(a) - b._d * usefulness(b))) {
+        if (room <= 0) break;
+        if (dedup && brands.has(brand(p))) continue;
+        kept.add(p);
+        brands.add(brand(p));
+        room--;
+      }
+    }
+  }
+  return places.filter((p) => kept.has(p)).map(({ _d, ...p }) => p);
+}
+
 async function main() {
   const t0 = Date.now();
   console.log('→ Géocodage des bureaux (BAN)…');
@@ -422,6 +524,16 @@ async function main() {
     });
   }
 
+  // Sélection éditoriale : quelques lieux essentiels par catégorie.
+  const candidates = places.length;
+  const pinned = new Set(Object.entries(mods).filter(([, m]) => m.epingler).map(([id]) => id));
+  places = selectEssentials(places, office, pinned);
+  console.log(`→ Sélection : ${places.length} lieux retenus sur ${candidates} candidats`);
+
+  // Tracés : uniquement les lignes ferrées qui desservent les stations retenues.
+  const served = new Set(places.flatMap((p) => (p.lines || []).filter((l) => l.mode !== 'bus').map((l) => `${l.mode}:${l.ref}`)));
+  transit.lines = transit.lines.filter((f) => served.has(`${f.properties.mode}:${f.properties.ref}`));
+
   console.log(`→ Adresses (BAN, géocodage inverse) pour ${places.length} lieux…`);
   await mapLimit(places, 6, async (p) => {
     if (p.addressOverride) {
@@ -451,6 +563,7 @@ async function main() {
     generatedAt: new Date().toISOString(),
     office,
     radius: RADIUS,
+    selection: SELECTION,
     counts,
     sources: [
       { name: 'OpenStreetMap', url: 'https://www.openstreetmap.org/copyright', licence: 'ODbL' },

@@ -5,12 +5,13 @@
     "",
     "modifications : clé = identifiant du lieu (visible dans data/quartier.json, champ id).",
     "  Champs possibles : nom, note, coupDeCoeur (true/false), dejeunerPro (true/false),",
-    "  siteWeb, telephone, horaires, adresse, masquer (true pour retirer un lieu).",
+    "  siteWeb, telephone, horaires, adresse, masquer (true pour retirer un lieu),",
+    "  epingler (true pour toujours afficher un lieu, même hors de la sélection automatique).",
     "",
     "ajouts : lieux absents des sources ouvertes.",
     "  Champs : id, nom, categorie (bien-etre | restaurants | courses | sante | transports),",
     "  type (ex. restaurant, cafe, sport, pharmacie… voir README), lat, lon,",
-    "  et les mêmes champs facultatifs que ci-dessus."
+    "  et les mêmes champs facultatifs que ci-dessus. Un lieu ajouté est toujours affiché."
   ],
   "modifications": {},
   "ajouts": []

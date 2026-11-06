@@ -5,7 +5,8 @@
  *  - palette réduite de la charte : blanc cassé #F1EFEB, anthracite #26282D (textes),
  *    vert doux #B0D6AA atténué (espaces verts), blanc (rues) ; l'aubergine #2B041A est
  *    réservée au marqueur Ocellis et aux interactions (elle n'apparaît pas dans le fond) ;
- *  - bâti en aplats très clairs, bords nets, sans contour visible ni ombre ;
+ *  - fond légèrement plus soutenu que le blanc cassé pour des rues blanches bien nettes ;
+ *  - bâti en aplats très clairs, bords nets, sans contour ni ombre, affiché seulement de près ;
  *  - rues en blanc, sans bordure, sur trois niveaux de largeur ; seule l'avenue Charles de Gaulle
  *    reçoit un double filet fin pour rester repérable ;
  *  - libellés sobres et peu répétés : grands axes en petites capitales, petites rues de près.
@@ -23,10 +24,10 @@ export const BRAND = {
 };
 
 const C = {
-  land: '#f1efeb',
-  building: '#e7e4df', // aplat à peine plus soutenu que le fond
-  green: '#d6e4d0', // #B0D6AA atténué sur le blanc cassé
-  water: '#d9e0e2',
+  land: '#ebe7e0', // variation chaude du blanc cassé #F1EFEB : les rues blanches ressortent nettement
+  building: '#e3ded6', // bâti à peine plus soutenu que le fond, visible seulement de près
+  green: '#cadec2', // #B0D6AA adouci
+  water: '#d1dbdf',
   street: '#ffffff',
   axisEdge: 'rgba(38, 40, 45, 0.24)', // filets de l'avenue Charles de Gaulle
   labelAxis: 'rgba(38, 40, 45, 0.86)',
@@ -35,7 +36,7 @@ const C = {
   labelPlace: 'rgba(38, 40, 45, 0.4)',
   labelWater: '#7c8d95',
   halo: '#ffffff',
-  haloLand: 'rgba(241, 239, 235, 0.95)',
+  haloLand: 'rgba(235, 231, 224, 0.95)',
 };
 
 const FONT = ['Noto Sans Regular'];
@@ -51,9 +52,9 @@ const isAxis = ['all', ['==', ['get', 'name'], AXIS_NAME], cls('primary', 'trunk
 const zw = (...stops) => ['interpolate', ['exponential', 1.5], ['zoom'], ...stops.flat()];
 
 /* Largeurs des voies (px), par niveau hiérarchique. */
-const W_MINOR = zw([13.5, 0.5], [16, 3], [18, 9]);
-const W_MEDIUM = zw([12, 0.7], [16, 5], [18, 14]);
-const W_MAJOR = zw([11, 1], [16, 8], [18, 22]);
+const W_MINOR = zw([13.5, 0.6], [16, 3.4], [18, 10]);
+const W_MEDIUM = zw([12, 0.9], [16, 5.5], [18, 15]);
+const W_MAJOR = zw([11, 1.2], [16, 9], [18, 24]);
 
 export function buildStyle() {
   return {
@@ -94,12 +95,12 @@ export function buildStyle() {
 
       /* Bâti : aplats très clairs, bords nets (antialiasing + contour de la même couleur),
          en fondu à l'apparition pour garder une lecture d'îlots à petite échelle. */
-      { id: 'building', type: 'fill', source: 'openmaptiles', 'source-layer': 'building', minzoom: 14,
+      { id: 'building', type: 'fill', source: 'openmaptiles', 'source-layer': 'building', minzoom: 15.6,
         paint: {
           'fill-color': C.building,
           'fill-outline-color': C.building,
           'fill-antialias': true,
-          'fill-opacity': ['interpolate', ['linear'], ['zoom'], 14, 0, 15.2, 1],
+          'fill-opacity': ['interpolate', ['linear'], ['zoom'], 15.6, 0, 16.6, 1],
         } },
 
       /* Voirie : trois niveaux, en blanc, sans bordure. Ni chemins, ni tunnels, ni voies de service isolées. */
@@ -123,7 +124,7 @@ export function buildStyle() {
         paint: {
           'line-color': C.axisEdge,
           'line-width': ['interpolate', ['linear'], ['zoom'], 13, 0.6, 17, 1],
-          'line-gap-width': zw([11, 1], [16, 9], [18, 23]),
+          'line-gap-width': zw([11, 1.2], [16, 10], [18, 25]),
         } },
 
       /* Libellés */
@@ -149,7 +150,7 @@ export function buildStyle() {
           'symbol-placement': 'line', 'symbol-spacing': 700, 'text-max-angle': 20, 'text-padding': 6,
         },
         paint: { 'text-color': C.labelMajor, 'text-halo-color': C.halo, 'text-halo-width': 1.3 } },
-      { id: 'street-name-medium', type: 'symbol', source: 'openmaptiles', 'source-layer': 'transportation_name', minzoom: 15,
+      { id: 'street-name-medium', type: 'symbol', source: 'openmaptiles', 'source-layer': 'transportation_name', minzoom: 16,
         filter: cls('tertiary'),
         layout: {
           'text-field': ['upcase', NAME], 'text-font': FONT,
@@ -157,7 +158,7 @@ export function buildStyle() {
           'symbol-placement': 'line', 'symbol-spacing': 700, 'text-max-angle': 20, 'text-padding': 6,
         },
         paint: { 'text-color': C.labelMajor, 'text-halo-color': C.halo, 'text-halo-width': 1.3 } },
-      { id: 'street-name-minor', type: 'symbol', source: 'openmaptiles', 'source-layer': 'transportation_name', minzoom: 16.6,
+      { id: 'street-name-minor', type: 'symbol', source: 'openmaptiles', 'source-layer': 'transportation_name', minzoom: 17,
         filter: cls('minor'),
         layout: {
           'text-field': NAME, 'text-font': FONT, 'text-size': 10.5, 'text-letter-spacing': 0.03,

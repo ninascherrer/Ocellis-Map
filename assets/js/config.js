@@ -2,13 +2,18 @@
  * Catégories, types de lieux et pictogrammes.
  * Une seule couleur (l'aubergine Ocellis) pour toutes les catégories : on les distingue par le pictogramme.
  */
+/*
+ * Une couleur sourde par catégorie (pastilles de la carte, pictogrammes de la liste et des filtres).
+ * Tons choisis pour rester doux à côté de l'aubergine Ocellis, et contrastés avec un pictogramme blanc.
+ */
 export const CATEGORIES = [
-  { id: 'bien-etre', label: 'Bien-être', short: 'Bien-être', icon: 'leaf', blurb: 'Sport, piscines, parcs et jardins' },
-  { id: 'restaurants', label: 'Restaurants', short: 'Restos', icon: 'utensils', blurb: 'Déjeuners, cafés, boulangeries' },
-  { id: 'courses', label: 'Courses', short: 'Courses', icon: 'shopping-basket', blurb: 'Supermarchés et commerces de bouche' },
-  { id: 'sante', label: 'Urgences & santé', short: 'Santé', icon: 'heart-pulse', blurb: 'Pharmacies, hôpitaux, centres médicaux' },
-  { id: 'transports', label: 'Transports', short: 'Transports', icon: 'tram-front', blurb: "Métro, RER, tram, bus, Vélib', parkings" },
+  { id: 'bien-etre', label: 'Bien-être', short: 'Bien-être', icon: 'leaf', color: '#5f8f5a', blurb: 'Sport, piscine, parcs et jardins' },
+  { id: 'restaurants', label: 'Restaurants', short: 'Restos', icon: 'utensils', color: '#a35f78', blurb: 'Déjeuners, cafés, boulangeries' },
+  { id: 'courses', label: 'Courses', short: 'Courses', icon: 'shopping-basket', color: '#9e7b33', blurb: 'Supermarchés et supérettes' },
+  { id: 'sante', label: 'Urgences & santé', short: 'Santé', icon: 'heart-pulse', color: '#b35a4c', blurb: 'Pharmacies et hôpital' },
+  { id: 'transports', label: 'Transports', short: 'Transports', icon: 'tram-front', color: '#5b6f80', blurb: "Métro, RER, bus, Vélib', parkings" },
 ];
+export const CATEGORY_COLOR = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.color]));
 
 /** Types de lieux : libellé + pictogramme (Lucide, ou « metro » dessiné à la main). */
 export const TYPES = {
