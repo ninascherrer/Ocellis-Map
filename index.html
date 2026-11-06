@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Ocellis · Guide du quartier</title>
+  <meta name="description" content="Carte interactive du quartier autour des nouveaux bureaux Ocellis, 96 avenue Charles de Gaulle à Neuilly-sur-Seine : restaurants, courses, bien-être, santé et transports.">
+  <meta name="theme-color" content="#2b0018">
+  <link rel="icon" type="image/png" sizes="96x96" href="assets/brand/favicon-96.png">
+  <link rel="apple-touch-icon" href="assets/brand/apple-touch-icon.png">
+  <link rel="stylesheet" href="vendor/maplibre-gl/maplibre-gl.css">
+  <link rel="stylesheet" href="assets/css/app.css">
+  <link rel="modulepreload" href="vendor/maplibre-gl/maplibre-gl.mjs">
+  <link rel="preload" href="data/quartier.json" as="fetch" crossorigin>
+</head>
+<body>
+  <div class="app" id="app">
+    <!-- Panneau latéral (bureau) / tiroir du bas (mobile) -->
+    <aside class="panel" id="panel" aria-label="Explorer le quartier" data-state="peek">
+      <button class="panel__handle" id="panel-handle" type="button" aria-controls="panel" aria-expanded="false">
+        <span class="panel__grip" aria-hidden="true"></span>
+        <span class="panel__handle-label" id="panel-handle-label">Explorer le quartier</span>
+      </button>
+
+      <header class="brand">
+        <a class="brand__logo" href="https://ocellis.fr" target="_blank" rel="noopener" aria-label="Ocellis — site officiel">
+          <img src="assets/brand/ocellis-logo.svg" alt="Ocellis" width="110" height="44">
+        </a>
+        <p class="brand__eyebrow">Guide du quartier</p>
+        <h1 class="brand__title">Bienvenue dans votre nouveau quartier</h1>
+        <button class="brand__address" id="brand-address" type="button">
+          <span class="ico" data-icon="map-pin" aria-hidden="true"></span>
+          <span>96 avenue Charles de Gaulle<br>92200 Neuilly-sur-Seine</span>
+        </button>
+      </header>
+
+      <section class="highlights" id="highlights" aria-label="Le quartier en un coup d'œil"></section>
+
+      <div class="search">
+        <span class="ico search__icon" data-icon="search" aria-hidden="true"></span>
+        <input id="search" class="search__input" type="search" placeholder="Rechercher un lieu, une rue, une ligne…" autocomplete="off" aria-label="Rechercher un lieu">
+        <button class="search__clear" id="search-clear" type="button" aria-label="Effacer la recherche" hidden>
+          <span class="ico" data-icon="x" aria-hidden="true"></span>
+        </button>
+      </div>
+
+      <nav class="filters" id="filters" aria-label="Catégories"></nav>
+      <div class="subfilters" id="subfilters" aria-label="Types de lieux"></div>
+
+      <div class="results-head">
+        <p id="results-count" aria-live="polite"></p>
+        <p class="results-head__hint">Triés par distance des bureaux</p>
+      </div>
+      <div class="results" id="results" role="list"></div>
+
+      <footer class="sources" id="sources"></footer>
+    </aside>
+
+    <!-- Carte -->
+    <main class="map-wrap">
+      <div id="map" class="map" role="region" aria-label="Carte du quartier"></div>
+
+      <div class="map-brand" aria-hidden="true">
+        <img src="assets/brand/ocellis-logo.svg" alt="" width="84" height="34">
+        <span>Guide du quartier</span>
+      </div>
+
+      <button class="recenter" id="recenter" type="button" title="Recentrer la carte sur les bureaux Ocellis">
+        <span class="recenter__symbol" aria-hidden="true"><img src="assets/brand/ocellis-symbol-white.svg" alt=""></span>
+        <span class="recenter__label">Recentrer sur Ocellis</span>
+      </button>
+
+      <div class="legend" id="legend">
+        <span class="legend__ring" aria-hidden="true"></span>
+        <span>Cercles : <strong>5, 10 et 15 min</strong> à pied des bureaux</span>
+        <span class="legend__hint" id="legend-hint"><span class="legend__dot" aria-hidden="true"></span>Zoomez ou choisissez une catégorie pour voir les pictogrammes</span>
+      </div>
+
+      <div class="map-error" id="map-error" hidden>
+        <p><strong>La carte n'a pas pu se charger.</strong></p>
+        <p>Vérifiez la connexion Internet (le fond de carte est servi par openfreemap.org).</p>
+      </div>
+    </main>
+
+    <!-- Fiche détaillée (mobile) -->
+    <section class="sheet-card" id="sheet-card" aria-live="polite" hidden></section>
+  </div>
+
+  <div class="toast" id="toast" role="status" hidden></div>
+
+  <script type="module" src="assets/js/app.js"></script>
+</body>
+</html>
