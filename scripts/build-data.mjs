@@ -307,6 +307,7 @@ const LANDMARKS = [
   // radius : rayon (m) pour relever les lignes ; les grandes gares s'étendent sur plusieurs centaines de mètres.
   { cat: 'gares', sub: 'gare', name: 'Gare Saint-Lazare', match: /^paris saint lazare$/, cls: ['railway'], near: [48.8765, 2.3252], radius: 550 },
   { cat: 'gares', sub: 'gare', name: 'Gare Montparnasse', match: /^gare montparnasse$/, cls: ['railway'], near: [48.8401, 2.3191], radius: 650 },
+  { cat: 'gares', sub: 'gare', name: 'Gare de Lyon', match: /^(paris )?gare de lyon$/, cls: ['railway'], subclass: 'station', near: [48.8447, 2.3738], radius: 550 },
   { cat: 'monuments', sub: 'monument', name: 'Arc de Triomphe', match: /^arc de triomphe$/, cls: ['monument'], near: [48.8738, 2.2950] },
   { cat: 'monuments', sub: 'monument', name: 'Grande Arche de la Défense', match: /^grande arche de la defense$/, cls: ['attraction'], near: [48.8926, 2.2359] },
 ];
@@ -327,6 +328,7 @@ async function fetchLandmarks(office, nearbyStations) {
         for (let i = 0; layer && i < layer.length; i++) {
           const ft = layer.feature(i);
           if (!lm.cls.includes(ft.properties.class) || !lm.match.test(norm(ft.properties.name))) continue;
+          if (lm.subclass && ft.properties.subclass !== lm.subclass) continue; // ex. la gare, pas la station de métro homonyme
           const g = ft.toGeoJSON(xt + dx, yt + dy, Z).geometry;
           if (g.type !== 'Point') continue;
           const d = haversine(lat0, lon0, g.coordinates[1], g.coordinates[0]);

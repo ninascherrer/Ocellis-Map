@@ -287,7 +287,8 @@ function initMap() {
     zoom: INITIAL_ZOOM(),
     minZoom: 12.5,
     maxZoom: 19,
-    maxBounds: [[office.lon - 0.09, office.lat - 0.06], [office.lon + 0.09, office.lat + 0.06]],
+    // Périmètre de navigation : le quartier, élargi vers l'est jusqu'aux grandes gares parisiennes.
+    maxBounds: [[office.lon - 0.09, office.lat - 0.06], [office.lon + 0.14, office.lat + 0.06]],
     attributionControl: false,
     dragRotate: false,
     pitchWithRotate: false,

@@ -19,7 +19,7 @@ for (const p of d.places) {
   if (!p.name) errors.push(`Nom manquant : ${p.id}`);
   if (!cats.has(p.cat)) errors.push(`Catégorie inconnue « ${p.cat} » : ${where}`);
   if (!TYPES[p.sub]) errors.push(`Type inconnu « ${p.sub} » : ${where}`);
-  if (!(Math.abs(p.lat - d.office.lat) < 0.05 && Math.abs(p.lon - d.office.lon) < 0.07)) errors.push(`Coordonnées hors du quartier : ${where}`);
+  if (!(Math.abs(p.lat - d.office.lat) < 0.055 && p.lon - d.office.lon > -0.085 && p.lon - d.office.lon < 0.135)) errors.push(`Coordonnées hors de la carte : ${where}`);
 }
 const missing = CATEGORIES.filter((c) => !d.places.some((p) => p.cat === c.id)).map((c) => c.label);
 if (missing.length) errors.push(`Catégories vides : ${missing.join(', ')}`);
