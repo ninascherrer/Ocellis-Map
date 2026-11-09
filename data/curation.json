@@ -17,6 +17,14 @@
     "osm-node-1328467045": {
       "type": "brasserie",
       "_source": "Café, bar, brasserie selon Acceslibre (acceslibre.beta.gouv.fr)"
+    },
+    "osm-node-988277536": {
+      "masquer": true,
+      "_source": "Point « Monoprix » au 113 av. Charles de Gaulle (côté opposé) non confirmé ; le Monoprix est au 72, même côté que les bureaux (annuaire des entreprises)."
+    },
+    "osm-node-605173628": {
+      "epingler": true,
+      "_source": "Monoprix, 72 avenue Charles de Gaulle (annuaire des entreprises)."
     }
   },
   "ajouts": []
