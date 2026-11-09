@@ -308,6 +308,7 @@ const LANDMARKS = [
   { cat: 'gares', sub: 'gare', name: 'Gare Saint-Lazare', match: /^paris saint lazare$/, cls: ['railway'], near: [48.8765, 2.3252], radius: 550 },
   { cat: 'gares', sub: 'gare', name: 'Gare Montparnasse', match: /^gare montparnasse$/, cls: ['railway'], near: [48.8401, 2.3191], radius: 650 },
   { cat: 'gares', sub: 'gare', name: 'Gare de Lyon', match: /^(paris )?gare de lyon$/, cls: ['railway'], subclass: 'station', near: [48.8447, 2.3738], radius: 550 },
+  { cat: 'gares', sub: 'gare', name: "Gare d'Austerlitz", match: /^paris austerlitz$/, cls: ['railway'], subclass: 'station', near: [48.8413, 2.3665], radius: 550 },
   { cat: 'monuments', sub: 'monument', name: 'Arc de Triomphe', match: /^arc de triomphe$/, cls: ['monument'], near: [48.8738, 2.2950] },
   { cat: 'monuments', sub: 'monument', name: 'Grande Arche de la Défense', match: /^grande arche de la defense$/, cls: ['attraction'], near: [48.8926, 2.2359] },
 ];
