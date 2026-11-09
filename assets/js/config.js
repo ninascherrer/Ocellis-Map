@@ -1,21 +1,24 @@
 /**
  * Catégories, types de lieux et pictogrammes.
- * Une seule couleur (l'aubergine Ocellis) pour toutes les catégories : on les distingue par le pictogramme.
- */
-/*
- * Une couleur par catégorie, tirée de la palette « Color combo no. 757 » :
- * crème #F0E7E2, rose sable #CEAB97, sauge #A1A58C, terracotta #AD6640, bleu ardoise #3D5C6E, gris bleu #BFC7C9.
- *  - color : fond de la pastille sur la carte ;
- *  - glyph : couleur du pictogramme sur la pastille (crème sur les teintes soutenues,
- *            même teinte assombrie sur les teintes claires, contraste ≥ 3,6:1) ;
- *  - ink   : couleur des pictogrammes de la liste et des filtres (lisible sur fond clair).
+ *
+ * Une couleur par catégorie, tirée de la charte graphique Ocellis (couleurs du site ocellis.fr),
+ * chaque teinte étant associée à sa couleur « partenaire » de la charte pour le pictogramme :
+ *  - rose #F9D7F6 + prune #2B041A, jaune #F2E29C + bleu nuit #010D2D,
+ *  - vert clair #B0D6AA + vert foncé #032A02 (et l'inverse pour la santé, façon croix de pharmacie),
+ *  - bleu nuit #010D2D + blanc Ocellis #F1EFEB.
+ * Champs :
+ *  - color : fond de la pastille ;
+ *  - glyph : pictogramme sur la pastille ;
+ *  - edge  : filet extérieur fin des pastilles claires, pour qu'elles se détachent du fond de carte ;
+ *  - ink   : pictogrammes de la liste et des filtres (variation foncée de la teinte, lisible sur fond clair).
+ * L'aubergine pleine reste réservée au marqueur Ocellis et aux interactions.
  */
 export const CATEGORIES = [
-  { id: 'bien-etre', label: 'Bien-être', short: 'Bien-être', icon: 'leaf', color: '#a1a58c', glyph: '#464838', ink: '#464838', blurb: 'Sport, piscine, parcs et jardins' },
-  { id: 'restaurants', label: 'Restaurants', short: 'Restos', icon: 'utensils', color: '#ceab97', glyph: '#714a33', ink: '#714a33', blurb: 'Déjeuners, cafés, boulangeries' },
-  { id: 'courses', label: 'Courses', short: 'Courses', icon: 'shopping-basket', color: '#bfc7c9', glyph: '#566366', ink: '#566366', blurb: 'Supermarchés et supérettes' },
-  { id: 'sante', label: 'Urgences & santé', short: 'Santé', icon: 'heart-pulse', color: '#ad6640', glyph: '#f0e7e2', ink: '#ad6640', blurb: 'Pharmacies et hôpital' },
-  { id: 'transports', label: 'Transports', short: 'Transports', icon: 'tram-front', color: '#3d5c6e', glyph: '#f0e7e2', ink: '#3d5c6e', blurb: "Métro, RER, bus, Vélib', parkings" },
+  { id: 'bien-etre', label: 'Bien-être', short: 'Bien-être', icon: 'leaf', color: '#b0d6aa', glyph: '#032a02', edge: 'rgba(3,42,2,0.32)', ink: '#498440', blurb: 'Sport, piscine, parcs et jardins' },
+  { id: 'restaurants', label: 'Restaurants', short: 'Restos', icon: 'utensils', color: '#f9d7f6', glyph: '#2b041a', edge: 'rgba(43,4,26,0.32)', ink: '#2b041a', blurb: 'Déjeuners, brasseries, cafés, boulangeries' },
+  { id: 'courses', label: 'Courses', short: 'Courses', icon: 'shopping-basket', color: '#f2e29c', glyph: '#010d2d', edge: 'rgba(1,13,45,0.32)', ink: '#897312', blurb: 'Supermarchés et supérettes' },
+  { id: 'sante', label: 'Urgences & santé', short: 'Santé', icon: 'heart-pulse', color: '#032a02', glyph: '#b0d6aa', ink: '#032a02', blurb: 'Pharmacies et hôpital' },
+  { id: 'transports', label: 'Transports', short: 'Transports', icon: 'tram-front', color: '#010d2d', glyph: '#f1efeb', ink: '#010d2d', blurb: "Métro, RER, bus, Vélib', parkings" },
 ];
 export const CATEGORY_COLOR = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.color]));
 export const CATEGORY_STYLE = Object.fromEntries(CATEGORIES.map((c) => [c.id, c]));

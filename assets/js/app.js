@@ -203,7 +203,7 @@ const markerId = (p) => `poi-${p.cat}-${typeIcon(p)}`;
  * Pastille de lieu : disque à la couleur de la catégorie, pictogramme contrasté, liseré blanc.
  * 40 px à l'écran (52 px quand le lieu est sélectionné ou survolé, avec un anneau aubergine).
  */
-function markerSvg(glyph, color, glyphColor, active) {
+function markerSvg(glyph, color, glyphColor, edge, active) {
   const size = active ? 128 : 96; // unités @2x, marge comprise pour l'ombre
   const c = size / 2;
   const r = active ? 46 : 36; // rayon du disque
@@ -216,6 +216,7 @@ function markerSvg(glyph, color, glyphColor, active) {
     </filter></defs>
     ${active ? `<circle cx="${c}" cy="${c}" r="${r + 9}" fill="none" stroke="${BRAND.prune}" stroke-width="4"/>` : ''}
     <circle cx="${c}" cy="${c}" r="${r}" fill="${color}" stroke="#ffffff" stroke-width="${active ? 6 : 5}" filter="url(#sh)"/>
+    ${edge && !active ? `<circle cx="${c}" cy="${c}" r="${r + 3.2}" fill="none" stroke="${edge}" stroke-width="1.4"/>` : ''}
     <g transform="translate(${t} ${t}) scale(${s})" fill="none" stroke="${glyphColor}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${glyph}</g>
   </svg>`;
 }
@@ -248,7 +249,7 @@ async function registerIcons() {
       const id = `poi-${cat}-${name}${active ? '-active' : ''}`;
       if (map.hasImage(id)) return;
       const st = CATEGORY_STYLE[cat];
-      const img = await loadImage(markerSvg(glyph, st.color, st.glyph, active));
+      const img = await loadImage(markerSvg(glyph, st.color, st.glyph, st.edge, active));
       if (!map.hasImage(id)) map.addImage(id, img, { pixelRatio: DPR });
     });
   }));
