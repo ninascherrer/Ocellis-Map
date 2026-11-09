@@ -354,9 +354,11 @@ function initMap() {
         'text-field': ['get', 'name'],
         'text-font': ['Noto Sans Bold'],
         'text-size': ['interpolate', ['linear'], ['zoom'], 15, 11, 18, 12.5],
-        'text-anchor': 'left',
-        // Décalage au-delà de l'emprise de la pastille (ombre comprise), pour ne pas la chevaucher.
-        'text-offset': ['interpolate', ['linear'], ['zoom'], 15, ['literal', [2.35, 0]], 18, ['literal', [2.3, 0]]],
+        // Le nom se place à droite de la pastille, ou à gauche, dessous, dessus si la place est prise,
+        // à une distance qui dépasse l'emprise de la pastille (ombre comprise) pour ne jamais la chevaucher.
+        'text-variable-anchor': ['left', 'right', 'top', 'bottom'],
+        'text-radial-offset': ['interpolate', ['linear'], ['zoom'], 15, 2.35, 18, 2.3],
+        'text-justify': 'auto',
         'text-max-width': 9,
         'text-padding': 1,
         'symbol-sort-key': ['get', 'd'],
