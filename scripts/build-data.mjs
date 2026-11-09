@@ -241,7 +241,7 @@ async function idfmAll(dataset, where, select) {
   return out;
 }
 
-const MODE = { Metro: 'metro', RapidTransit: 'rer', Tramway: 'tram', Bus: 'bus', LocalTrain: 'rer' };
+const MODE = { Metro: 'metro', RapidTransit: 'rer', Tramway: 'tram', Bus: 'bus', LocalTrain: 'train' };
 
 async function fetchTransit(office) {
   const pt = `geom'POINT(${office.lon} ${office.lat})'`;
@@ -273,7 +273,7 @@ async function fetchTransit(office) {
     const lon = g.pts.reduce((a, p) => a + p[1], 0) / g.pts.length;
     const sub = g.mode;
     const d = haversine(office.lat, office.lon, lat, lon);
-    if (d > RADIUS[sub]) continue;
+    if (!RADIUS[sub] || d > RADIUS[sub]) continue;
     const lines = [...g.lines.values()].sort((a, b) => a.ref.localeCompare(b.ref, 'fr', { numeric: true }));
     places.push({
       id: `idfm-${sub}-${slug(g.name)}`,
@@ -297,6 +297,79 @@ async function fetchTransit(office) {
 
 function roundCoords(c) {
   return typeof c[0] === 'number' ? [round(c[0]), round(c[1])] : c.map(roundCoords);
+}
+
+/* --------------------------------------------------------------------------------------------- */
+/* 3 bis. Grandes gares et monuments : plus loin, on s'y rend en transports                      */
+
+/* `near` sert seulement à choisir les tuiles à lire ; la position retenue est celle d'OpenStreetMap. */
+const LANDMARKS = [
+  // radius : rayon (m) pour relever les lignes ; les grandes gares s'étendent sur plusieurs centaines de mètres.
+  { cat: 'gares', sub: 'gare', name: 'Gare Saint-Lazare', match: /^paris saint lazare$/, cls: ['railway'], near: [48.8765, 2.3252], radius: 550 },
+  { cat: 'gares', sub: 'gare', name: 'Gare Montparnasse', match: /^gare montparnasse$/, cls: ['railway'], near: [48.8401, 2.3191], radius: 650 },
+  { cat: 'monuments', sub: 'monument', name: 'Arc de Triomphe', match: /^arc de triomphe$/, cls: ['monument'], near: [48.8738, 2.2950] },
+  { cat: 'monuments', sub: 'monument', name: 'Grande Arche de la Défense', match: /^grande arche de la defense$/, cls: ['attraction'], near: [48.8926, 2.2359] },
+];
+
+async function fetchLandmarks(office, nearbyStations) {
+  const tj = await fetchRetry('https://tiles.openfreemap.org/planet');
+  const Z = 14, n = 2 ** Z;
+  const out = [];
+  for (const lm of LANDMARKS) {
+    const [lat0, lon0] = lm.near;
+    const xt = Math.floor(((lon0 + 180) / 360) * n);
+    const yt = Math.floor(((1 - Math.log(Math.tan((lat0 * Math.PI) / 180) + 1 / Math.cos((lat0 * Math.PI) / 180)) / Math.PI) / 2) * n);
+    let best = null;
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dy = -1; dy <= 1; dy++) {
+        const buf = await fetchRetry(tj.tiles[0].replace('{z}', Z).replace('{x}', xt + dx).replace('{y}', yt + dy), { as: 'buffer' });
+        const layer = new VectorTile(new Pbf(buf)).layers.poi;
+        for (let i = 0; layer && i < layer.length; i++) {
+          const ft = layer.feature(i);
+          if (!lm.cls.includes(ft.properties.class) || !lm.match.test(norm(ft.properties.name))) continue;
+          const g = ft.toGeoJSON(xt + dx, yt + dy, Z).geometry;
+          if (g.type !== 'Point') continue;
+          const d = haversine(lat0, lon0, g.coordinates[1], g.coordinates[0]);
+          if (!best || d < best.d) best = { d, lon: g.coordinates[0], lat: g.coordinates[1], osm: osmRef(ft.id) };
+        }
+      }
+    }
+    if (!best) { console.warn(`  ⚠ ${lm.name} introuvable dans OpenStreetMap, ignoré`); continue; }
+
+    // Lignes ferrées à moins de 500 m, avec leur couleur officielle.
+    const pt = `geom'POINT(${best.lon} ${best.lat})'`;
+    const stops = await idfmAll('arrets-lignes', `within_distance(pointgeo, ${pt}, ${lm.radius || 500}m)`);
+    const traces = await idfmAll('traces-du-reseau-ferre-idf', `within_distance(geo_shape, ${pt}, 700m)`, 'indice_lig,metro,rer,tramway,train,colourweb_hexa');
+    const colors = {};
+    for (const t of traces) {
+      const mode = t.metro ? 'metro' : t.rer ? 'rer' : t.tramway ? 'tram' : 'train';
+      const ref = t.tramway ? `T${String(t.indice_lig).replace(/^T/i, '').replace(/bis$/i, 'b')}` : String(t.indice_lig);
+      colors[`${mode}:${ref}`] = `#${t.colourweb_hexa}`;
+    }
+    const lines = new Map();
+    for (const st of stops) {
+      const mode = MODE[st.mode];
+      if (!mode || mode === 'bus') continue;
+      lines.set(`${mode}:${st.shortname}`, { mode, ref: st.shortname, color: colors[`${mode}:${st.shortname}`] || null });
+    }
+    const order = { metro: 0, rer: 1, train: 2, tram: 3 };
+    const lineList = [...lines.values()].sort((a, b) => order[a.mode] - order[b.mode] || a.ref.localeCompare(b.ref, 'fr', { numeric: true }));
+
+    // Accès direct : une ligne commune avec une station proche des bureaux.
+    const access = [];
+    for (const l of lineList) {
+      const from = nearbyStations
+        .filter((s) => s.lines.some((x) => x.mode === l.mode && x.ref === l.ref))
+        .sort((a, b) => a._d - b._d)[0];
+      if (from) access.push({ ...l, from: from.name });
+    }
+    out.push({
+      id: best.osm ? `osm-${best.osm.type}-${best.osm.id}` : `repere-${slug(lm.name)}`,
+      name: lm.name, cat: lm.cat, sub: lm.sub, lat: best.lat, lon: best.lon,
+      lines: lineList, access, osm: best.osm, source: 'landmark',
+    });
+  }
+  return out;
 }
 
 /* --------------------------------------------------------------------------------------------- */
@@ -356,7 +429,7 @@ const SUB_LABEL = {
   chocolatier: 'Chocolatier', surgeles: 'Surgelés',
   sport: 'Salle de sport & club', piscine: 'Piscine', parc: 'Parc', jardin: 'Jardin & square',
   pharmacie: 'Pharmacie', hopital: 'Hôpital', clinique: 'Clinique', 'centre-medical': 'Centre médical',
-  metro: 'Métro', rer: 'RER', tram: 'Tramway', bus: 'Bus', parking: 'Parking', 'parking-velo': 'Parking vélos', velib: "Station Vélib'",
+  metro: 'Métro', rer: 'RER', tram: 'Tramway', bus: 'Bus', parking: 'Parking', gare: 'Grande gare', monument: 'Monument', 'parking-velo': 'Parking vélos', velib: "Station Vélib'",
 };
 
 function genericName(sub) {
@@ -419,7 +492,7 @@ function pickBusStops(stops, n) {
 
 function selectEssentials(places, office, pinned) {
   for (const p of places) p._d = haversine(office.lat, office.lon, p.lat, p.lon);
-  const kept = new Set(places.filter((p) => pinned.has(p.id) || p.source === 'curation'));
+  const kept = new Set(places.filter((p) => pinned.has(p.id) || ['curation', 'landmark'].includes(p.source)));
   for (const [cat, groups] of Object.entries(SELECTION)) {
     for (const [group, quota] of Object.entries(groups)) {
       const types = group.split('+');
@@ -499,7 +572,16 @@ async function main() {
   const velib = await fetchVelib(office);
   console.log(`  ${velib.length} stations`);
 
-  let places = [...osmPlaces, ...transit.places, ...velib];
+  // Les stations retenues près des bureaux servent à calculer les accès directs vers les gares et monuments.
+  const nearStations = transit.places
+    .filter((p) => ['metro', 'rer'].includes(p.sub))
+    .map((p) => ({ ...p, _d: haversine(office.lat, office.lon, p.lat, p.lon) }))
+    .filter((p) => p._d <= 1300);
+  console.log('→ Grandes gares et monuments…');
+  const landmarks = await fetchLandmarks(office, nearStations);
+  console.log(`  ${landmarks.map((l) => `${l.name} (${(l.access || []).map((a) => `${a.mode} ${a.ref} depuis ${a.from}`).join(', ') || 'avec correspondance'})`).join(' · ')}`);
+
+  let places = [...osmPlaces, ...transit.places, ...velib, ...landmarks];
 
   // Curation manuelle.
   const curation = JSON.parse(await fs.readFile(CURATION, 'utf8'));
@@ -533,7 +615,8 @@ async function main() {
   console.log(`→ Sélection : ${places.length} lieux retenus sur ${candidates} candidats`);
 
   // Tracés : uniquement les lignes ferrées qui desservent les stations retenues.
-  const served = new Set(places.flatMap((p) => (p.lines || []).filter((l) => l.mode !== 'bus').map((l) => `${l.mode}:${l.ref}`)));
+  const served = new Set(places.filter((p) => p.cat === 'transports')
+    .flatMap((p) => (p.lines || []).filter((l) => l.mode !== 'bus').map((l) => `${l.mode}:${l.ref}`)));
   transit.lines = transit.lines.filter((f) => served.has(`${f.properties.mode}:${f.properties.ref}`));
 
   console.log(`→ Adresses (BAN, géocodage inverse) pour ${places.length} lieux…`);

@@ -48,7 +48,7 @@ const ICONS = [
   // santé
   'hospital', 'stethoscope', 'pill', 'heart-pulse', 'siren', 'phone',
   // transports
-  'train-front', 'bus-front', 'square-parking', 'bike', 'lock-keyhole',
+  'train-front', 'bus-front', 'square-parking', 'bike', 'lock-keyhole', 'landmark',
   // interface
   'search', 'x', 'navigation', 'footprints', 'external-link', 'map-pin', 'locate-fixed', 'share-2',
   'chevron-up', 'chevron-down', 'sparkles', 'briefcase', 'heart', 'clock', 'info', 'route', 'check', 'list', 'map',

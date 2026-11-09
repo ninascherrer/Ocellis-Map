@@ -5,7 +5,8 @@
  * chaque teinte étant associée à sa couleur « partenaire » de la charte pour le pictogramme :
  *  - rose #F9D7F6 + prune #2B041A, jaune #F2E29C + bleu nuit #010D2D,
  *  - vert clair #B0D6AA + vert foncé #032A02 (et l'inverse pour la santé, façon croix de pharmacie),
- *  - bleu nuit #010D2D + blanc Ocellis #F1EFEB.
+ *  - bleu nuit #010D2D + blanc Ocellis #F1EFEB,
+ *  - gris #E8EAEC + bleu nuit (grandes gares), anthracite #26282D + jaune (monuments).
  * Champs :
  *  - color : fond de la pastille ;
  *  - glyph : pictogramme sur la pastille ;
@@ -19,6 +20,8 @@ export const CATEGORIES = [
   { id: 'courses', label: 'Courses', short: 'Courses', icon: 'shopping-basket', color: '#f2e29c', glyph: '#010d2d', edge: 'rgba(1,13,45,0.32)', ink: '#897312', blurb: 'Supermarchés et supérettes' },
   { id: 'sante', label: 'Urgences & santé', short: 'Santé', icon: 'heart-pulse', color: '#032a02', glyph: '#b0d6aa', ink: '#032a02', blurb: 'Pharmacies et hôpital' },
   { id: 'transports', label: 'Transports', short: 'Transports', icon: 'tram-front', color: '#010d2d', glyph: '#f1efeb', ink: '#010d2d', blurb: "Métro, RER, bus, Vélib', parkings" },
+  { id: 'gares', label: 'Grandes gares', short: 'Gares', icon: 'train-front', color: '#e8eaec', glyph: '#010d2d', edge: 'rgba(1,13,45,0.32)', ink: '#5d6670', blurb: 'Gares parisiennes accessibles en transports', far: true },
+  { id: 'monuments', label: 'Monuments', short: 'Monuments', icon: 'landmark', color: '#26282d', glyph: '#f2e29c', ink: '#26282d', blurb: 'Monuments emblématiques à proximité', far: true },
 ];
 export const CATEGORY_COLOR = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.color]));
 export const CATEGORY_STYLE = Object.fromEntries(CATEGORIES.map((c) => [c.id, c]));
@@ -68,6 +71,9 @@ export const TYPES = {
   velib: { label: "Vélib'", icon: 'bike' },
   'parking-velo': { label: 'Parking vélos', icon: 'lock-keyhole' },
   parking: { label: 'Parking', icon: 'square-parking' },
+  // Grandes gares et monuments
+  gare: { label: 'Grande gare', icon: 'train-front' },
+  monument: { label: 'Monument', icon: 'landmark' },
 };
 
 /** Ordre d'affichage des sous-filtres par catégorie. */
@@ -77,6 +83,8 @@ export const TYPE_ORDER = {
   courses: ['supermarche', 'superette', 'primeur', 'boucherie', 'fromagerie', 'poissonnerie', 'epicerie-fine', 'marche', 'caviste', 'patisserie', 'chocolatier', 'surgeles'],
   sante: ['pharmacie', 'hopital', 'clinique', 'centre-medical'],
   transports: ['metro', 'rer', 'tram', 'bus', 'velib', 'parking-velo', 'parking'],
+  gares: ['gare'],
+  monuments: ['monument'],
 };
 
 /** Pictogramme « M » du métro, même grille et même trait que Lucide. */

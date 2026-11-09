@@ -48,18 +48,19 @@ function textOn(hex) {
 
 function lineBadges(lines = [], { withMode = false } = {}) {
   if (!lines.length) return '';
-  const byMode = { metro: [], rer: [], tram: [], bus: [] };
+  const byMode = { metro: [], rer: [], train: [], tram: [], bus: [] };
   lines.forEach((l) => (byMode[l.mode] || byMode.bus).push(l));
   const out = [];
   for (const [mode, ls] of Object.entries(byMode)) {
     if (!ls.length) continue;
-    const prefix = withMode && mode !== 'metro' ? `<span class="line__mode">${mode === 'rer' ? 'RER' : mode === 'tram' ? '' : 'Bus'}</span>` : '';
+    const MODE_LABEL = { rer: 'RER', train: 'Train', tram: '', bus: 'Bus' };
+    const prefix = withMode && mode !== 'metro' ? `<span class="line__mode">${MODE_LABEL[mode]}</span>` : '';
     const badges = ls.map((l) => {
       if (mode === 'bus') {
         const night = /^N\d/.test(l.ref);
         return `<span class="line line--bus${night ? ' line--night' : ''}" title="${night ? 'Noctilien' : 'Bus'} ${esc(l.ref)}">${esc(l.ref)}</span>`;
       }
-      const label = mode === 'metro' ? `Métro ${l.ref}` : mode === 'rer' ? `RER ${l.ref}` : `Tram ${l.ref}`;
+      const label = { metro: 'Métro', rer: 'RER', train: 'Transilien', tram: 'Tram' }[mode] + ` ${l.ref}`;
       const style = l.color ? `background:${l.color};color:${textOn(l.color)}` : `background:${BRAND.prune};color:#fff`;
       return `<span class="line line--${mode}" style="${style}" title="${label}">${esc(l.ref)}</span>`;
     }).join('');
@@ -91,6 +92,7 @@ function toast(msg) {
 const ll = (p) => `${p.lat},${p.lon}`;
 const links = {
   gmapsTo: (p) => `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(ll(p))}`,
+  gmapsTransit: (from, to) => `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(ll(from))}&destination=${encodeURIComponent(ll(to))}&travelmode=transit`,
   gmapsWalk: (from, to) => `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(ll(from))}&destination=${encodeURIComponent(ll(to))}&travelmode=walking`,
   gmapsSearch: (p) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([p.name, p.address?.street, p.address?.city].filter(Boolean).join(', '))}`,
   appleTo: (p, name) => `https://maps.apple.com/?daddr=${ll(p)}&q=${encodeURIComponent(name)}`,
@@ -173,7 +175,7 @@ function placesGeoJSON() {
     type: 'FeatureCollection',
     features: visiblePlaces().map((p) => ({
       type: 'Feature',
-      properties: { id: p.id, name: p.name, icon: markerId(p), d: p.distance, fav: p.favorite ? 1 : 0 },
+      properties: { id: p.id, name: p.name, icon: markerId(p), d: p.distance, fav: p.favorite ? 1 : 0, far: CATEGORY_STYLE[p.cat]?.far ? 1 : 0 },
       geometry: { type: 'Point', coordinates: [p.lon, p.lat] },
     })),
   };
@@ -349,9 +351,10 @@ function initMap() {
     // Deux couches : les pastilles (au-dessus) sont placées en premier, les noms (dessous) évitent ensuite
     // toutes les pastilles, si bien qu'aucun nom ne passe sous un marqueur.
     map.addLayer({
-      id: 'places-label', type: 'symbol', source: 'places', minzoom: 15,
+      id: 'places-label', type: 'symbol', source: 'places',
       layout: {
-        'text-field': ['get', 'name'],
+        // Noms à partir du zoom 15 ; les grandes gares et monuments, lointains, sont nommés à toutes les échelles.
+        'text-field': ['step', ['zoom'], ['case', ['==', ['get', 'far'], 1], ['get', 'name'], ''], 15, ['get', 'name']],
         'text-font': ['Noto Sans Bold'],
         'text-size': ['interpolate', ['linear'], ['zoom'], 15, 11, 18, 12.5],
         // Le nom se place à droite de la pastille, ou à gauche, dessous, dessus si la place est prise,
@@ -569,16 +572,24 @@ function placeCard(p) {
   const cat = CATEGORIES.find((c) => c.id === p.cat);
   const o = state.office;
   const far = p.distance > 2200;
+  const byTransit = p.distance > 1800; // au-delà, l'itinéraire proposé est en transports
   const facts = [
-    `<li class="fact fact--rose">${ico('footprints')} ${far ? '≈ ' : ''}${fmtWalk(p.distance)} à pied</li>`,
+    walkMinutes(p.distance) <= 45 ? `<li class="fact fact--rose">${ico('footprints')} ${far ? '≈ ' : ''}${fmtWalk(p.distance)} à pied</li>` : '',
     `<li class="fact">${ico('route')} ${fmtDist(p.distance)} des bureaux</li>`,
-  ];
+  ].filter(Boolean);
   if (p.businessLunch) facts.push(`<li class="fact">${ico('briefcase')} Idéal déjeuner pro</li>`);
   if (p.favorite) facts.push(`<li class="fact">${ico('heart')} Coup de cœur de l'équipe</li>`);
 
   let extra = '';
+  if (p.access) {
+    // Grandes gares et monuments : comment s'y rendre depuis les stations proches des bureaux.
+    const direct = p.access.length
+      ? p.access.map((a) => `<li class="fact">${lineBadges([a], { withMode: true })} direct depuis ${esc(a.from)}</li>`).join('')
+      : `<li class="fact">${ico('route')} Avec une correspondance</li>`;
+    extra += `<div class="card__section"><p class="card__section-title">Pour y aller</p><ul class="card__facts card__facts--tight">${direct}</ul></div>`;
+  }
   if (p.lines?.length) {
-    extra += `<div class="card__section"><p class="card__section-title">Lignes</p>${lineBadges(p.lines, { withMode: true })}</div>`;
+    extra += `<div class="card__section"><p class="card__section-title">${p.access ? 'Lignes sur place' : 'Lignes'}</p>${lineBadges(p.lines, { withMode: true })}</div>`;
   }
   if (p.sub === 'velib') extra += `<div class="card__section" data-velib="${esc(p.velib.code)}">${velibBlock(p)}</div>`;
   if (p.hours) extra += `<div class="card__section"><p class="card__section-title">Horaires</p><p class="card__address">${esc(p.hours)}</p></div>`;
@@ -590,7 +601,7 @@ function placeCard(p) {
     p.source === 'osm' ? `<a href="${links.gmapsSearch(p)}" target="_blank" rel="noopener">Horaires & avis (Google Maps) ${ico('external-link')}</a>` : '',
     links.osm(p) ? `<a href="${links.osm(p)}" target="_blank" rel="noopener">OpenStreetMap ${ico('external-link')}</a>` : '',
     `<a href="${links.citymapperFrom(o, p, p.name)}" target="_blank" rel="noopener">Citymapper ${ico('external-link')}</a>`,
-    `<a href="${links.appleWalk(o, p, p.name)}" target="_blank" rel="noopener">Plans (Apple) ${ico('external-link')}</a>`,
+    `<a href="${links.appleWalk(o, p, p.name).replace('dirflg=w', byTransit ? 'dirflg=r' : 'dirflg=w')}" target="_blank" rel="noopener">Plans (Apple) ${ico('external-link')}</a>`,
   ].filter(Boolean).join('');
 
   return `
@@ -604,7 +615,7 @@ function placeCard(p) {
     </div>
     ${extra}
     <div class="card__actions">
-      <a class="btn btn--primary" href="${links.gmapsWalk(o, p)}" target="_blank" rel="noopener">${ico('navigation')} Itinéraire depuis Ocellis</a>
+      <a class="btn btn--primary" href="${byTransit ? links.gmapsTransit(o, p) : links.gmapsWalk(o, p)}" target="_blank" rel="noopener">${ico('navigation')} ${byTransit ? 'Itinéraire en transports' : 'Itinéraire depuis Ocellis'}</a>
       <button class="btn btn--icon" type="button" data-action="share" aria-label="Partager le lien" title="Partager">${ico('share-2')}</button>
       <div class="card__links">${extLinks}</div>
     </div>
@@ -784,13 +795,15 @@ function resultItem(p) {
   const fav = p.favorite ? `<span class="result__fav" title="Coup de cœur">${ico('heart')}</span>` : '';
   return `
     <button class="result${p.id === state.selectedId ? ' is-active' : ''}" type="button" role="listitem" data-id="${esc(p.id)}"
-      aria-label="${esc(`${p.name}, ${typeLabel(p)}, ${fmtWalk(p.distance)} à pied`)}">
+      aria-label="${esc(`${p.name}, ${typeLabel(p)}, ${walkMinutes(p.distance) > 45 ? `${fmtDist(p.distance)}, en transports` : `${fmtWalk(p.distance)} à pied`}`)}">
       <span class="result__icon" style="${catVars(p.cat)}">${ico(typeIcon(p))}</span>
       <span class="result__body">
         <span class="result__name">${esc(p.name)} ${fav}</span>
         <span class="result__meta">${meta}</span>
       </span>
-      <span class="result__dist"><strong>${fmtWalk(p.distance)}</strong>${fmtDist(p.distance)}</span>
+      ${walkMinutes(p.distance) > 45
+        ? `<span class="result__dist"><strong>${fmtDist(p.distance)}</strong>en transports</span>`
+        : `<span class="result__dist"><strong>${fmtWalk(p.distance)}</strong>${fmtDist(p.distance)}</span>`}
     </button>`;
 }
 
