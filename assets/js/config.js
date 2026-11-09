@@ -11,7 +11,8 @@
  *  - color : fond de la pastille ;
  *  - glyph : pictogramme sur la pastille ;
  *  - edge  : filet extérieur fin des pastilles claires, pour qu'elles se détachent du fond de carte ;
- *  - ink   : pictogrammes de la liste et des filtres (variation foncée de la teinte, lisible sur fond clair).
+ *  - ink   : pictogrammes de la liste et des filtres (variation foncée de la teinte, lisible sur fond clair) ;
+ *  - scale : taille de la pastille sur la carte (1 par défaut ; les monuments sont un peu plus grands).
  * L'aubergine pleine reste réservée au marqueur Ocellis et aux interactions.
  */
 export const CATEGORIES = [
@@ -21,7 +22,7 @@ export const CATEGORIES = [
   { id: 'sante', label: 'Urgences & santé', short: 'Santé', icon: 'heart-pulse', color: '#032a02', glyph: '#b0d6aa', ink: '#032a02', blurb: 'Pharmacies et hôpital' },
   { id: 'transports', label: 'Transports', short: 'Transports', icon: 'tram-front', color: '#010d2d', glyph: '#f1efeb', ink: '#010d2d', blurb: "Métro, RER, bus, Vélib', parkings" },
   { id: 'gares', label: 'Grandes gares', short: 'Gares', icon: 'train-front', color: '#e8eaec', glyph: '#010d2d', edge: 'rgba(1,13,45,0.32)', ink: '#5d6670', blurb: 'Gares parisiennes accessibles en transports', far: true },
-  { id: 'monuments', label: 'Monuments', short: 'Monuments', icon: 'landmark', color: '#26282d', glyph: '#f2e29c', ink: '#26282d', blurb: 'Monuments emblématiques à proximité', far: true },
+  { id: 'monuments', label: 'Monuments', short: 'Monuments', icon: 'landmark', color: '#26282d', glyph: '#f2e29c', ink: '#26282d', blurb: 'Monuments emblématiques à proximité', far: true, scale: 1.5 },
 ];
 export const CATEGORY_COLOR = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.color]));
 export const CATEGORY_STYLE = Object.fromEntries(CATEGORIES.map((c) => [c.id, c]));

@@ -175,7 +175,10 @@ function placesGeoJSON() {
     type: 'FeatureCollection',
     features: visiblePlaces().map((p) => ({
       type: 'Feature',
-      properties: { id: p.id, name: p.name, icon: markerId(p), d: p.distance, fav: p.favorite ? 1 : 0, far: CATEGORY_STYLE[p.cat]?.far ? 1 : 0 },
+      properties: {
+        id: p.id, name: p.name, icon: markerId(p), d: p.distance, fav: p.favorite ? 1 : 0,
+        far: CATEGORY_STYLE[p.cat]?.far ? 1 : 0, scale: CATEGORY_STYLE[p.cat]?.scale || 1,
+      },
       geometry: { type: 'Point', coordinates: [p.lon, p.lat] },
     })),
   };
@@ -188,7 +191,7 @@ function focusGeoJSON() {
     if (!p || (kind === 'hover' && id === state.selectedId)) continue;
     features.push({
       type: 'Feature',
-      properties: { id, kind, icon: `${markerId(p)}-active` },
+      properties: { id, kind, icon: `${markerId(p)}-active`, scale: CATEGORY_STYLE[p.cat]?.scale || 1 },
       geometry: { type: 'Point', coordinates: [p.lon, p.lat] },
     });
   }
@@ -360,7 +363,10 @@ function initMap() {
         // Le nom se place à droite de la pastille, ou à gauche, dessous, dessus si la place est prise,
         // à une distance qui dépasse l'emprise de la pastille (ombre comprise) pour ne jamais la chevaucher.
         'text-variable-anchor': ['left', 'right', 'top', 'bottom'],
-        'text-radial-offset': ['interpolate', ['linear'], ['zoom'], 15, 2.35, 18, 2.3],
+        // Le décalage suit la taille de la pastille (plus grande pour les monuments).
+        'text-radial-offset': ['interpolate', ['linear'], ['zoom'],
+          13, ['*', ['case', ['==', ['get', 'far'], 1], 2.5, 2.35], ['get', 'scale']],
+          15, ['*', 2.35, ['get', 'scale']], 18, ['*', 2.3, ['get', 'scale']]],
         'text-justify': 'auto',
         'text-max-width': 9,
         'text-padding': 1,
@@ -372,7 +378,11 @@ function initMap() {
       id: 'places', type: 'symbol', source: 'places',
       layout: {
         'icon-image': ['get', 'icon'],
-        'icon-size': ['interpolate', ['linear'], ['zoom'], 13, 0.62, 15, 0.88, 16, 1, 18, 1.08],
+        // Taille × échelle de la catégorie ; les gares et monuments, vus de loin, rétrécissent moins en dézoomant.
+        'icon-size': ['interpolate', ['linear'], ['zoom'],
+          13, ['*', ['case', ['==', ['get', 'far'], 1], 0.85, 0.62], ['get', 'scale']],
+          15, ['*', ['case', ['==', ['get', 'far'], 1], 0.95, 0.88], ['get', 'scale']],
+          16, ['get', 'scale'], 18, ['*', 1.08, ['get', 'scale']]],
         'icon-allow-overlap': true,
         'icon-padding': 0,
         'symbol-sort-key': ['-', 0, ['get', 'd']], // les plus proches dessinés au-dessus
@@ -387,7 +397,7 @@ function initMap() {
       id: 'focus', type: 'symbol', source: 'focus',
       layout: {
         'icon-image': ['get', 'icon'],
-        'icon-size': ['case', ['==', ['get', 'kind'], 'selected'], 1, 0.9],
+        'icon-size': ['*', ['get', 'scale'], ['case', ['==', ['get', 'kind'], 'selected'], 1, 0.9]],
         'icon-allow-overlap': true,
         'icon-ignore-placement': true,
       },
@@ -721,7 +731,8 @@ function fitToVisible(max = 24) {
   if (!list.length || state.activeCats.size === CATEGORIES.length) return;
   const b = new maplibregl.LngLatBounds([state.office.lon, state.office.lat], [state.office.lon, state.office.lat]);
   list.forEach((p) => b.extend([p.lon, p.lat]));
-  const pad = isMobile() ? { top: 80, bottom: 200, left: 40, right: 40 } : { top: 90, bottom: 70, left: 70, right: 70 };
+  // Marges latérales généreuses : les noms affichés à côté des pastilles ne doivent pas être coupés.
+  const pad = isMobile() ? { top: 80, bottom: 200, left: 50, right: 90 } : { top: 90, bottom: 80, left: 130, right: 170 };
   map.fitBounds(b, { padding: pad, maxZoom: 16.2, duration: 800 });
 }
 
