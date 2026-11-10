@@ -41,7 +41,7 @@ export const TYPES = {
   jardin: { label: 'Jardin & square', icon: 'trees' },
   // Restaurants
   restaurant: { label: 'Restaurant', icon: 'utensils' },
-  brasserie: { label: 'Brasserie', icon: 'beer' },
+  brasserie: { label: 'Brasserie', icon: 'utensils' },
   'sur-le-pouce': { label: 'Sur le pouce', icon: 'sandwich' },
   cafe: { label: 'Café', icon: 'coffee' },
   boulangerie: { label: 'Boulangerie', icon: 'croissant' },
